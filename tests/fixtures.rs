@@ -136,3 +136,24 @@ fn http_scaffold_injects_close_malformed_response_and_timeout() {
         }
     }
 }
+
+#[test]
+fn http_scaffold_observes_stream_cancellation() {
+    let server: Http = Http::new(vec![Reply::Disconnect]);
+    let mut stream: TcpStream = connect(&server, b"GET / HTTP/1.1\r\n\r\n");
+    server
+        .requests
+        .recv_timeout(Duration::from_secs(2))
+        .unwrap();
+    let mut buffer: [u8; 128] = [0; 128];
+    assert!(stream.read(&mut buffer).unwrap() > 0);
+    drop(stream);
+    assert_eq!(
+        server
+            .requests
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap(),
+        b"disconnected"
+    );
+    server.finish().unwrap();
+}

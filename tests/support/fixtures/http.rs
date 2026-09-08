@@ -10,6 +10,7 @@ pub enum Reply {
     Bytes(Vec<u8>),
     Close,
     Stall,
+    Disconnect,
 }
 
 pub struct Http {
@@ -74,6 +75,7 @@ fn serve(
         match reply {
             Reply::Bytes(bytes) => stream.write_all(&bytes)?,
             Reply::Close => {}
+            Reply::Disconnect => disconnect(&mut stream, &sender)?,
             Reply::Stall => {
                 let started: Instant = Instant::now();
                 while !stop.load(Ordering::Relaxed) && started.elapsed() < Duration::from_secs(2) {
@@ -83,6 +85,24 @@ fn serve(
         }
     }
     Ok(())
+}
+
+fn disconnect(stream: &mut TcpStream, sender: &Sender<Vec<u8>>) -> io::Result<()> {
+    stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n: waiting\n\n")?;
+    let mut byte: [u8; 1] = [0];
+    match stream.read(&mut byte) {
+        Ok(0) => (),
+        Err(error)
+            if matches!(
+                error.kind(),
+                io::ErrorKind::ConnectionReset | io::ErrorKind::ConnectionAborted
+            ) => {}
+        Err(error) => return Err(error),
+        _ => return Err(io::Error::other("expected stream cancellation")),
+    }
+    sender
+        .send(b"disconnected".to_vec())
+        .map_err(|_| io::Error::other("request receiver closed"))
 }
 
 fn accept(listener: &TcpListener, stop: &AtomicBool) -> io::Result<Option<TcpStream>> {

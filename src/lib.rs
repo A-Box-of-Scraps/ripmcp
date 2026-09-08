@@ -3,6 +3,8 @@ pub mod cli;
 pub mod config;
 pub mod deadline;
 pub mod error;
+pub mod json;
+pub mod mcp;
 pub mod output;
 pub mod ownership;
 pub mod storage;

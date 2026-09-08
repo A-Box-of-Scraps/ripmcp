@@ -23,7 +23,7 @@ impl Call {
             Some(path) => Input::File(path),
             None => {
                 let raw: String = names.pop().ok_or_else(invalid)?;
-                let value: Value = serde_json::from_str(&raw).map_err(|_| invalid())?;
+                let value: Value = crate::json::parse(raw.as_bytes()).map_err(|_| invalid())?;
                 match value {
                     Value::Object(object) => Input::Inline(object),
                     _ => return Err(invalid()),

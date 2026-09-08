@@ -227,3 +227,38 @@ Executable schemas and tests, rather than these notes, define field validation.
   states and operation intents/progress. Unregistering retains records and retries;
   paths need not still exist on journal reload. No recursive resource scanning or
   actual installation/deletion is introduced in phase 02.
+
+## Phase 03 client integration contracts
+
+Completed September 8, 2026. The exact compatibility profile, pinned upstream
+audit and test evidence are in `03-protocol-client.md`.
+
+- `mcp::Client::{stdio,http}` first perform modern `server/discover`, not legacy
+  initialization. Only MCP `2026-07-28` is accepted. Each request carries its own
+  version/capabilities; HTTP has no protocol sessions in this revision.
+- Pass an existing `Deadline` and per-operation cancellation token in `Operation`.
+  Reuse that operation through discovery and invocation. Keep local clients under
+  supervisor ownership; a cancelled call does not stop the shared process.
+- Callers remain responsible for fresh configuration/trust and enablement checks,
+  authorized environment/secret resolution, and per-tool policy. No MCP runtime
+  types or connections have been embedded in CLI parsing/dispatch.
+- Use `Discovery::require_complete` before cross-server uniqueness resolution.
+  Invalid HTTP annotation definitions are explicitly reported and excluded; failed
+  pages return errors, not successful partial/empty lists. Qualified lookup can
+  select a valid tool despite unrelated rejected definitions. No discovery cache
+  exists and each call fetches fresh metadata under the same deadline.
+- Serialize the `ToolResult` or its envelope directly; inspect `is_error()` for
+  exit 7 after successful output. Do not replace the result with text-only content
+  or conflate a tool failure with a protocol error. Do not replay on any failure.
+- Use `json::parse` for arbitrary JSON inputs/results. It retains exact numbers
+  and literal private-looking field names, rejects duplicate keys and bounds
+  nesting. Inline arguments already use it; file/stdin and shape integrations
+  should not bypass it with generic `Value` deserialization.
+- Authentication providers must bind credentials/challenges to the supplied exact
+  resource, obey the operation deadline, sanitize diagnostics and remain
+  noninteractive. Phase 05 supplies OAuth and secure storage. Authorization
+  references must use this provider path rather than extra HTTP headers.
+- `SignalCancellation` is for the short-lived CLI lifetime. The supervisor should
+  translate IPC cancellation to individual operation tokens, not forward SIGINT
+  to its shared MCP child. Async stream cancellation and process shutdown have
+  separate lifetimes; process-group ownership remains phase 04 work.

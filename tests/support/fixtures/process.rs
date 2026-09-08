@@ -40,7 +40,24 @@ impl Script {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         Process {
-            child: Some(command.spawn().unwrap()),
+            child: Some(spawn_ready(&mut command)),
+        }
+    }
+}
+
+fn spawn_ready(command: &mut Command) -> Child {
+    let started: Instant = Instant::now();
+    loop {
+        match command.spawn() {
+            Ok(child) => return child,
+            // ETXTBSY is a pre-exec failure: no fixture command has run.
+            Err(error)
+                if error.kind() == io::ErrorKind::ExecutableFileBusy
+                    && started.elapsed() < Duration::from_secs(1) =>
+            {
+                thread::sleep(Duration::from_millis(2));
+            }
+            Err(error) => panic!("fixture spawn failed: {error}"),
         }
     }
 }

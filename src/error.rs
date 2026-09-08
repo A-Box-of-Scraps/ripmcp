@@ -16,7 +16,7 @@ pub enum ErrorKind {
     Cancelled = 130,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Error {
     pub kind: ErrorKind,
     pub message: std::borrow::Cow<'static, str>,
