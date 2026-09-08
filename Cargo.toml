@@ -1,0 +1,21 @@
+[package]
+name = "ripmcp"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/A-Box-of-Scraps/ripmcp"
+
+[lints.clippy]
+complexity = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+cognitive_complexity = "deny"
+excessive_nesting = "deny"
+too_many_lines = "deny"
+too_many_arguments = "deny"
+type_complexity = "deny"
+fn_params_excessive_bools = "deny"
+struct_excessive_bools = "deny"
+
+[dependencies]
