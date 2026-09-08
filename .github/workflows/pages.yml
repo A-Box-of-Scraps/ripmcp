@@ -1,0 +1,61 @@
+name: OAuth metadata Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/oauth/client.json
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Validate and prepare public metadata
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          source = pathlib.Path("site/oauth/client.json")
+          document = json.loads(source.read_text())
+          assert document == {
+              "client_id": "https://a-box-of-scraps.github.io/ripmcp/oauth/client.json",
+              "client_name": "ripmcp",
+              "client_uri": "https://github.com/A-Box-of-Scraps/ripmcp",
+              "application_type": "native",
+              "redirect_uris": ["http://127.0.0.1:42813/oauth/callback"],
+              "grant_types": ["authorization_code", "refresh_token"],
+              "response_types": ["code"],
+              "token_endpoint_auth_method": "none",
+          }
+          destination = pathlib.Path("_site/oauth/client.json")
+          destination.parent.mkdir(parents=True, exist_ok=True)
+          destination.write_bytes(source.read_bytes())
+          PY
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: _site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
