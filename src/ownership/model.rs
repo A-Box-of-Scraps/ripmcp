@@ -51,6 +51,12 @@ pub struct Installation {
     pub server: String,
     pub origin: Origin,
     pub registration: Registration,
+    #[serde(default)]
+    pub verification: Verification,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<crate::config::Server>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub configuration_digest: Option<String>,
     pub resources: Vec<Resource>,
     pub retained_data: Vec<ResourceIdentity>,
 }
@@ -62,6 +68,9 @@ impl Installation {
             server,
             origin,
             registration: Registration::Registered,
+            verification: Verification::Unknown,
+            definition: None,
+            configuration_digest: None,
             resources: Vec::new(),
             retained_data: Vec::new(),
         })
@@ -71,6 +80,14 @@ impl Installation {
     }
     pub(super) fn validate(&self) -> Result<(), Error> {
         if self.server.is_empty() {
+            return Err(invalid());
+        }
+        if let Some(definition) = &self.definition {
+            definition.definition.validate()?;
+        }
+        if self.configuration_digest.as_ref().is_some_and(|digest| {
+            digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        }) {
             return Err(invalid());
         }
         let scope_path: &Path = match &self.scope {
@@ -110,6 +127,15 @@ pub enum Origin {
     },
     Unknown,
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Verification {
+    #[default]
+    Unknown,
+    Unverified,
+    Verified,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Registration {

@@ -265,7 +265,7 @@ async fn bounded_body(mut response: reqwest::Response, limit: usize) -> Result<V
     Ok(bytes)
 }
 
-fn validate_endpoint(endpoint: &Url) -> Result<(), Error> {
+pub(crate) fn validate_endpoint(endpoint: &Url) -> Result<(), Error> {
     let loopback = endpoint.host_str().is_some_and(|host| {
         host == "localhost"
             || host
@@ -287,7 +287,7 @@ fn validate_endpoint(endpoint: &Url) -> Result<(), Error> {
     Ok(())
 }
 
-fn reserved(name: &str) -> bool {
+pub(crate) fn reserved(name: &str) -> bool {
     name.starts_with("mcp-")
         || matches!(
             name,

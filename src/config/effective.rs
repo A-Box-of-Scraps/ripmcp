@@ -48,6 +48,21 @@ pub struct AuthorizedServer<'a> {
 }
 
 impl Effective {
+    pub(crate) fn staged(identity: Identity, server: Server) -> Self {
+        Self {
+            entries: BTreeMap::from([(
+                identity.name.clone(),
+                Entry {
+                    identity,
+                    server,
+                    trust_required: false,
+                },
+            )]),
+            timeouts: Timeouts::default(),
+            project: None,
+            start: PathBuf::from("/"),
+        }
+    }
     pub fn identity(&self, name: &str) -> Result<&Identity, Error> {
         self.entries
             .get(name)

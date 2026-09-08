@@ -118,6 +118,10 @@ async fn action(
 }
 
 fn environment(server: &AuthorizedServer<'_>) -> BTreeMap<String, String> {
+    installation_environment(server.server())
+}
+
+pub(crate) fn installation_environment(server: &crate::config::Server) -> BTreeMap<String, String> {
     let mut values: BTreeMap<String, String> = super::launch::BASE_ENV
         .iter()
         .filter_map(|key| {
@@ -126,7 +130,11 @@ fn environment(server: &AuthorizedServer<'_>) -> BTreeMap<String, String> {
                 .map(|value| ((*key).to_owned(), value))
         })
         .collect();
-    if let Definition::Local { env, .. } = &server.server().definition {
+    let env: &BTreeMap<String, SecretReference> = match &server.definition {
+        Definition::Local { env, .. } => env,
+        Definition::Remote { headers, .. } => headers,
+    };
+    {
         for reference in env.values() {
             if let SecretReference::Environment(name) = reference
                 && let Ok(value) = std::env::var(name)

@@ -140,7 +140,9 @@ fn uvx_launches_the_recorded_exact_requirement() {
     fixture.ok(&["call", "s", "echo", "{}"]);
     let args: Value =
         ripmcp::json::parse(&fs::read(fixture.root.path().join("server/args")).unwrap()).unwrap();
-    assert_eq!(args[0], "fixture==1.2.3");
+    assert_eq!(args[0], "--from");
+    assert_eq!(args[1], "fixture==1.2.3");
+    assert_eq!(args[2], "fixture");
 }
 
 #[test]

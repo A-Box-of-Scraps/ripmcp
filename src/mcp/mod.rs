@@ -73,3 +73,7 @@ fn limit_error() -> Error {
         "MCP resource limit exceeded; no truncated result was returned",
     )
 }
+
+pub(crate) use http::{
+    reserved as reserved_http_header, validate_endpoint as validate_http_endpoint,
+};

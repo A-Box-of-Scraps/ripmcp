@@ -12,6 +12,7 @@ pub enum Location {
     Cache,
 }
 
+#[derive(Clone)]
 pub struct Paths {
     environment: BTreeMap<OsString, OsString>,
 }

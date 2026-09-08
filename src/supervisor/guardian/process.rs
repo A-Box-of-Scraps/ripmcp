@@ -65,16 +65,17 @@ impl OwnedChild {
             self.readiness.readable().await;
     }
 
-    pub async fn terminate(&mut self) {
+    pub async fn terminate(&mut self) -> Result<std::process::ExitStatus, Error> {
         let _: Result<(), tokio::time::error::Elapsed> =
             tokio::time::timeout(Duration::from_millis(250), self.exited()).await;
         self.signal(Signal::TERM);
         tokio::time::sleep(Duration::from_millis(250)).await;
         self.signal(Signal::KILL);
         self.exited().await;
-        let _: std::io::Result<std::process::ExitStatus> = self.child.wait();
+        let status: std::io::Result<std::process::ExitStatus> = self.child.wait();
         self.reaped = true;
         reap_descendants().await;
+        status.map_err(crate::storage::io_error)
     }
 
     fn signal(&self, signal: Signal) {

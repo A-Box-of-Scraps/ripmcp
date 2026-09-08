@@ -1,4 +1,5 @@
 mod execute;
+mod install;
 pub(crate) mod status;
 
 use super::Barrier;
@@ -27,6 +28,7 @@ pub struct LocalRequest {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Action {
+    Install(Box<crate::install::Request>),
     Start,
     Stop,
     Tools { all: bool },
@@ -70,6 +72,9 @@ impl Manager {
         operation: &Operation,
     ) -> Result<Value, Error> {
         let _barrier: OwnedRwLockReadGuard<()> = operation.run(self.barrier.enter()).await?;
+        if matches!(request.action, Action::Install(_)) {
+            return self.install(request, operation).await;
+        }
         let effective: Effective = self.effective(&request)?;
         let key: String = key(effective.identity(&request.server)?)?;
         let slot: Arc<Slot> = operation.run(self.slot(&key)).await?;

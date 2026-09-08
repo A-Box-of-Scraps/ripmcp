@@ -4,7 +4,7 @@ mod command;
 mod endpoint;
 mod guardian;
 mod input;
-mod launch;
+pub(crate) mod launch;
 mod manager;
 mod service;
 mod wire;
@@ -36,3 +36,5 @@ fn unavailable() -> Error {
 fn incompatible() -> Error {
     Error::new(ErrorKind::Protocol, "incompatible supervisor IPC protocol")
 }
+
+pub(crate) use command::installation_environment;

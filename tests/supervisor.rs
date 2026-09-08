@@ -312,6 +312,7 @@ async fn changing_runtime_directory_cannot_create_a_second_supervisor_for_the_sa
     let fixture: Fixture = Fixture::new();
     fixture.ensure().await.ping(&operation()).await.unwrap();
     let runtime: TempDir = tempfile::tempdir().unwrap();
+    fs::set_permissions(runtime.path(), fs::Permissions::from_mode(0o700)).unwrap();
     let mut alternate: BTreeMap<OsString, OsString> = environment(fixture.root.path());
     alternate.insert(
         OsString::from("XDG_RUNTIME_DIR"),

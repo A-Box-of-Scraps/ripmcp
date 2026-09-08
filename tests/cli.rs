@@ -49,10 +49,6 @@ fn six_call_forms() {
 fn command_forms_have_explicit_unsupported_errors() {
     let sandbox: Sandbox = Sandbox::new();
     let forms: &[&[&str]] = &[
-        &["install", "s", "--npx", "pkg", "--", "--flag"],
-        &["install", "s", "--uvx", "pkg", "--project"],
-        &["install", "s", "--docker", "image", "--skip-verify"],
-        &["install", "s", "--config", "missing.json", "--user"],
         &["uninstall", "s"],
         &["uninstall", "s", "--clean"],
         &["uninstall", "s", "--clean", "-y"],

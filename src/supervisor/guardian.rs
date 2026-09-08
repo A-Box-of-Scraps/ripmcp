@@ -93,10 +93,17 @@ async fn supervise(guard: Guard) -> Result<(), Error> {
         _ = term.recv() => (),
         _ = interrupt.recv() => (),
     }
-    child.terminate().await;
+    let status: Result<std::process::ExitStatus, Error> = child.terminate().await;
     let result: Result<(), Error> = container::cleanup(&guard, &state).await;
     process::reap_descendants().await;
-    result
+    result?;
+    if guard.check_exit && !status?.success() {
+        return Err(Error::new(
+            ErrorKind::Connection,
+            "runtime preparation failed",
+        ));
+    }
+    Ok(())
 }
 
 fn validate(guard: &Guard) -> Result<(), Error> {

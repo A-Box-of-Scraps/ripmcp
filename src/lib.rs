@@ -4,6 +4,7 @@ pub mod cli;
 pub mod config;
 pub mod deadline;
 pub mod error;
+pub mod install;
 pub mod json;
 pub mod mcp;
 pub mod output;
@@ -32,6 +33,7 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::Unsupported, "v1 supports Linux only"));
     }
     match cli.command {
+        Some(Command::Install(install)) => return install::run(install, cli.timeout),
         Some(Command::Auth { command }) => return auth::run(command, cli.timeout),
         Some(Command::Supervisor) => return supervisor::run(),
         Some(Command::Guard(guard)) => return supervisor::guard(guard),

@@ -40,6 +40,8 @@ pub enum Command {
 
 #[derive(Args)]
 pub struct Guard {
+    #[arg(long)]
+    pub check_exit: bool,
     pub lease: String,
     pub parent: u32,
     #[arg(long)]

@@ -373,3 +373,38 @@ provider limitations and test matrix are in `05-authentication.md`.
   record the effective remote identity for later ownership/cleanup work. Do not
   treat an auth nickname, opaque keyring ID, saved status or stale config snapshot
   as permission to transmit credentials.
+
+
+## Phase 06 installation integration contracts
+
+Completed September 8, 2026. See `06-installation.md` for runtime resolution,
+transaction failure semantics, source references and validation evidence.
+
+- `install` is implemented for the four approved forms. Native imports are bounded,
+  regular-file, strict server objects; project-origin imports require unchanged
+  trust even when importing into user scope from another directory. Skip-verify
+  never bypasses transport/header/OAuth-profile or scope/ownership validation.
+- Supervisor IPC version 3 adds typed installation requests. The supervisor owns
+  provisional local children and retains only successfully verified local MCP
+  processes. Remote verification clients live only for their install request.
+- `Target` and `LockedStore` retain a configuration lock through preparation and
+  verification. Staged definitions cannot be used by ordinary commands. The
+  configuration rename publishes a previously journaled prepared installation;
+  snapshots and intent/progress records resolve interrupted publication. A failed
+  late write is an uncertain commit, not authority to restore old config bytes.
+- `OwnershipStore::update_async` uses cancellation-aware lock acquisition and the
+  existing operation budget. Installation records add optional definition and
+  intended-config-digest snapshots plus `unknown`/`unverified`/`verified` install-time
+  verification. Existing records still decode. Later observed health remains a
+  separate supervisor concern.
+- Install operation resources include `ripmcp-preparation-lease` and
+  `ripmcp-instance-lease` identities for local work. Recovery must reconcile those
+  with any `.instance-<key>.failed` container record and actual held leases. Never
+  infer PID authority from a journal or remove shared caches/images/user paths.
+- uvx launch now uses its documented `--from <exact-requirement> <command>` form,
+  rather than treating a requirement string as an executable name. Python downloads
+  remain disabled. No launch resolves an unpinned top-level package or image.
+- A failed remote auth check does not publish a pending active registration. The
+  recovery path is validated skip-verify registration, explicit auth login and
+  discovery, with project reapproval and shadowing caveats. Secret values never
+  enter installation reports or ownership snapshots.

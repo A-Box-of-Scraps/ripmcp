@@ -12,7 +12,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub(super) struct Prepared {
+pub(crate) struct Prepared {
     pub options: StdioOptions,
     pub revision: String,
     pub configuration_digest: String,
@@ -26,6 +26,19 @@ impl Prepared {
         environment: &BTreeMap<String, String>,
         key: &str,
         operation: &crate::mcp::Operation,
+    ) -> Result<Self, Error> {
+        let journal: Journal = OwnershipStore::new(paths)?.read()?;
+        let installation: &Installation = installation(&journal, server)?;
+        Self::for_installation(server, paths, environment, key, operation, installation).await
+    }
+
+    pub(crate) async fn for_installation(
+        server: &AuthorizedServer<'_>,
+        paths: &Paths,
+        environment: &BTreeMap<String, String>,
+        key: &str,
+        operation: &crate::mcp::Operation,
+        installation: &Installation,
     ) -> Result<Self, Error> {
         server.require_enabled(None)?;
         let Definition::Local {
@@ -42,17 +55,13 @@ impl Prepared {
                 "remote servers have no local lifecycle",
             ));
         };
-        let journal: Journal = OwnershipStore::new(paths)?.read()?;
-        let installation: &Installation = installation(&journal, server)?;
         let (resolved, executable): (&str, &PathBuf) = resolution(installation, *runtime, package)?;
-        let env: BTreeMap<OsString, OsString> =
+        let mut env: BTreeMap<OsString, OsString> =
             resolved_environment(server, environment, operation).await?;
-        let mut command: Vec<OsString> = vec![executable.as_os_str().to_owned()];
-        if *runtime == Runtime::Npx {
-            command.push("--yes".into());
+        if *runtime == Runtime::Uvx {
+            env.insert("UV_PYTHON_DOWNLOADS".into(), "never".into());
         }
-        command.push(resolved.into());
-        command.extend(args.iter().map(OsString::from));
+        let command: Vec<OsString> = runtime_command(*runtime, executable, resolved, args)?;
         let revision: String = revision(server, installation, executable, &env)?;
         let directory: Directory = paths.runtime(true)?.ok_or_else(super::invalid)?;
         let root: PathBuf =
@@ -102,6 +111,25 @@ impl Prepared {
     }
 }
 
+fn runtime_command(
+    runtime: Runtime,
+    executable: &std::path::Path,
+    resolved: &str,
+    args: &[String],
+) -> Result<Vec<OsString>, Error> {
+    let mut command: Vec<OsString> = vec![executable.as_os_str().to_owned()];
+    match runtime {
+        Runtime::Npx => command.extend([OsString::from("--yes"), resolved.into()]),
+        Runtime::Uvx => {
+            let (package, _): (&str, &str) = resolved.split_once("==").ok_or_else(unprepared)?;
+            command.extend([OsString::from("--from"), resolved.into(), package.into()]);
+        }
+        Runtime::Docker => command.push(resolved.into()),
+    }
+    command.extend(args.iter().map(OsString::from));
+    Ok(command)
+}
+
 async fn resolved_environment(
     server: &AuthorizedServer<'_>,
     environment: &BTreeMap<String, String>,
@@ -121,7 +149,7 @@ async fn resolved_environment(
     Ok(env)
 }
 
-pub(super) const BASE_ENV: &[&str] = &[
+pub(crate) const BASE_ENV: &[&str] = &[
     "PATH",
     "HOME",
     "LANG",
@@ -151,6 +179,14 @@ fn installation<'a>(
     if matches.next().is_some() {
         return Err(unprepared());
     }
+    if journal.operations.values().any(|operation| {
+        operation.installation_id == *entry.id()
+            && matches!(operation.kind, crate::ownership::OperationKind::Install)
+            && !matches!(operation.state, crate::ownership::OperationState::Committed)
+    }) && entry.configuration_digest.as_ref() != Some(&server.identity().configuration_digest)
+    {
+        return Err(unprepared());
+    }
     Ok(entry)
 }
 
@@ -178,7 +214,7 @@ fn resolution<'a>(
     Ok((resolved, executable))
 }
 
-fn pinned(runtime: Runtime, resolved: &str) -> bool {
+pub(crate) fn pinned(runtime: Runtime, resolved: &str) -> bool {
     if resolved.starts_with('-') || resolved.chars().any(char::is_whitespace) {
         return false;
     }
@@ -259,7 +295,7 @@ fn exact_npm_version(version: &str) -> bool {
         })
 }
 
-struct References<'a>(&'a BTreeMap<String, String>);
+pub(crate) struct References<'a>(pub &'a BTreeMap<String, String>);
 impl SecretBackend for References<'_> {
     fn environment(&self, name: &str) -> Result<Secret, Error> {
         self.0.get(name).cloned().map(Secret::new).ok_or_else(|| {

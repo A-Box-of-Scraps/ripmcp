@@ -8,15 +8,16 @@ and shell-friendly tool invocation. This directory is the implementation tracker
 for the user and subsequent agents, not product documentation.
 
 The original baseline was an entry-point stub with no application dependencies.
-Phases 01-05 are complete: typed CLI/error/output contracts, isolated fixtures,
+Phases 01-06 are complete: typed CLI/error/output contracts, isolated fixtures,
 configuration/storage/trust and ownership foundations, the tools-focused MCP
-client, persistent local supervisor lifecycle, and secure remote OAuth. Passive
+client, persistent local supervisor lifecycle, secure remote OAuth, and staged installation transactions. Passive
 `servers`, interactive `trust`, local `start`/`stop`, and qualified local tool
 operations are operational.
-Local execution requires a prepared immutable installation record; phase 06 will
-implement preparation and registration. Qualified remote tool operations and
-explicit auth login/status/logout are now operational. Installation,
-cross-server/shorthand workflow and cleanup remain in their respective phases.
+Local execution requires a prepared immutable installation record; installation now
+prepares local dependencies, verifies discovery without calls, retains successful
+local processes, and registers remote endpoints. Qualified remote tool operations
+and explicit auth login/status/logout are operational. Cross-server/shorthand
+workflow and cleanup remain in their respective phases.
 See the phase handoffs for validation evidence and integration contracts.
 
 The user's [confirmed command list](commands.md) overrides tentative spellings in
@@ -32,7 +33,7 @@ technical choices below are not silently promoted to user-approved decisions.
 | [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Done |
 | [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Done |
 | [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Done |
-| [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Not started |
+| [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Done |
 | [07](07-tool-workflow.md) | Tool policy, discovery, qualified/shorthand calls, shape | 03, 04, 05, 06 | Not started |
 | [08](08-cleanup.md) | Uninstall, clean uninstall, self-removal and recovery | 02, 04, 06, 07 | Not started |
 | [09](09-v1-validation.md) | Full-system regression, failure recovery and v1 readiness | All previous phases | Not started |

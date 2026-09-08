@@ -3,7 +3,7 @@ use crate::error::Error;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-pub(super) const VERSION: u32 = 2;
+pub(super) const VERSION: u32 = 3;
 pub(super) const FRAME_LIMIT: usize = 4096;
 
 #[derive(Deserialize, Serialize)]

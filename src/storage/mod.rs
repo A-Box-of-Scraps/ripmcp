@@ -4,6 +4,7 @@ mod transaction;
 
 pub use directory::Directory;
 pub use paths::{Location, Paths};
+pub(crate) use transaction::LockedStore;
 pub use transaction::Store;
 
 use crate::error::{Error, ErrorKind};

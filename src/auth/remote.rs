@@ -16,11 +16,21 @@ use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 use url::Url;
 
 struct Configured {
+    target: Option<Arc<crate::install::target::Target>>,
     provider: Option<Provider>,
     authorization: Option<HeaderValue>,
     identity: Identity,
     cwd: PathBuf,
     paths: Paths,
+}
+
+impl Configured {
+    fn recheck(&self) -> Result<(), Error> {
+        match &self.target {
+            Some(target) => target.check(),
+            None => recheck(&self.paths, &self.cwd, &self.identity),
+        }
+    }
 }
 
 impl AuthenticationProvider for Configured {
@@ -30,12 +40,12 @@ impl AuthenticationProvider for Configured {
         operation: &'a Operation,
     ) -> AuthorizationFuture<'a> {
         Box::pin(async move {
-            recheck(&self.paths, &self.cwd, &self.identity)?;
+            self.recheck()?;
             let result: Option<HeaderValue> = match &self.provider {
                 Some(provider) => provider.authorization(resource, operation).await?,
                 None => self.authorization.clone(),
             };
-            recheck(&self.paths, &self.cwd, &self.identity)?;
+            self.recheck()?;
             Ok(result)
         })
     }
@@ -49,7 +59,7 @@ impl AuthenticationProvider for Configured {
         operation: &'a Operation,
     ) -> ChallengeFuture<'a> {
         Box::pin(async move {
-            recheck(&self.paths, &self.cwd, &self.identity)?;
+            self.recheck()?;
             match &self.provider {
                 Some(provider) => {
                     provider
@@ -96,6 +106,34 @@ pub(crate) async fn options(
     cwd: &std::path::Path,
     operation: &Operation,
 ) -> Result<HttpOptions, Error> {
+    configured_options(server, cwd, operation, None, &EnvironmentOnly).await
+}
+
+pub(crate) async fn installation_options(
+    target: Arc<crate::install::target::Target>,
+    cwd: &std::path::Path,
+    environment: &BTreeMap<String, String>,
+    operation: &Operation,
+) -> Result<HttpOptions, Error> {
+    target.check()?;
+    let server: AuthorizedServer<'_> = target.effective.authorize(&target.identity.name)?;
+    configured_options(
+        &server,
+        cwd,
+        operation,
+        Some(target.clone()),
+        &crate::supervisor::launch::References(environment),
+    )
+    .await
+}
+
+async fn configured_options(
+    server: &AuthorizedServer<'_>,
+    cwd: &std::path::Path,
+    operation: &Operation,
+    target: Option<Arc<crate::install::target::Target>>,
+    backend: &(impl crate::trust::secrets::SecretBackend + Sync),
+) -> Result<HttpOptions, Error> {
     server.require_enabled(None)?;
     let Definition::Remote {
         url,
@@ -106,9 +144,8 @@ pub(crate) async fn options(
         return Err(super::invalid());
     };
     let endpoint: Url = crate::config::schema::endpoint(url)?;
-    let secrets: BTreeMap<String, Secret> = server
-        .resolve_secrets_async(&EnvironmentOnly, operation)
-        .await?;
+    let secrets: BTreeMap<String, Secret> =
+        server.resolve_secrets_async(backend, operation).await?;
     let mut headers: HeaderMap = HeaderMap::new();
     let mut authorization: Option<HeaderValue> = None;
     for (name, secret) in secrets {
@@ -139,6 +176,7 @@ pub(crate) async fn options(
         endpoint,
         headers,
         authentication: Arc::new(Configured {
+            target,
             provider,
             authorization,
             identity: server.identity().clone(),

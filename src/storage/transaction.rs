@@ -14,7 +14,85 @@ pub struct Store {
     private: bool,
 }
 
+pub(crate) struct LockedStore {
+    directory: Directory,
+    name: String,
+    private: bool,
+    _lock: File,
+    path: PathBuf,
+    pub previous: Option<Vec<u8>>,
+}
+
+impl LockedStore {
+    pub fn unchanged(&self) -> Result<(), Error> {
+        use std::os::unix::fs::MetadataExt;
+        let current: Directory =
+            Directory::open(&self.path, false, self.private)?.ok_or_else(invalid)?;
+        let expected: std::fs::Metadata =
+            std::fs::metadata(self.directory.descriptor_path()).map_err(io_error)?;
+        let actual: std::fs::Metadata =
+            std::fs::metadata(current.descriptor_path()).map_err(io_error)?;
+        if (actual.dev(), actual.ino()) != (expected.dev(), expected.ino()) {
+            return Err(invalid());
+        }
+        if self.directory.read(&self.name, self.private)? != self.previous {
+            return Err(crate::error::Error::new(
+                crate::error::ErrorKind::Configuration,
+                "configuration changed during installation; retry without overwriting it",
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn commit(&self, bytes: &[u8], operation: &crate::mcp::Operation) -> Result<(), Error> {
+        if bytes.len() > 4 * 1024 * 1024 {
+            return Err(invalid());
+        }
+        self.unchanged()?;
+        let temporary: String = format!(".{}.pending", self.name);
+        self.directory.remove(&temporary)?;
+        let mut file: File = self
+            .directory
+            .file(
+                &temporary,
+                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL,
+                true,
+            )?
+            .ok_or_else(invalid)?;
+        file.write_all(bytes).map_err(io_error)?;
+        file.sync_all().map_err(io_error)?;
+        operation.remaining()?;
+        self.unchanged()?;
+        self.directory.replace(&temporary, &self.name)
+    }
+}
+
 impl Store {
+    pub(crate) async fn lock(
+        &self,
+        operation: &crate::mcp::Operation,
+    ) -> Result<LockedStore, Error> {
+        operation.remaining()?;
+        let directory: Directory =
+            Directory::open(&self.directory, true, self.private)?.ok_or_else(invalid)?;
+        let lock: File = directory
+            .file(
+                &format!(".{}.lock", self.name),
+                OFlags::RDWR | OFlags::CREATE,
+                true,
+            )?
+            .ok_or_else(invalid)?;
+        operation.run(acquire_async(&lock)).await?;
+        let previous: Option<Vec<u8>> = directory.read(&self.name, self.private)?;
+        Ok(LockedStore {
+            directory,
+            name: self.name.clone(),
+            private: self.private,
+            _lock: lock,
+            path: self.directory.clone(),
+            previous,
+        })
+    }
     pub fn new(directory: PathBuf, name: &str, private: bool) -> Result<Self, Error> {
         if name.is_empty() || name.contains('/') || name.starts_with('.') {
             return Err(invalid());
@@ -111,6 +189,18 @@ fn acquire(file: &File, deadline: &Deadline) -> Result<(), Error> {
             Ok(()) => return Ok(()),
             Err(std::fs::TryLockError::WouldBlock) => {
                 std::thread::sleep(remaining.min(Duration::from_millis(5)))
+            }
+            Err(std::fs::TryLockError::Error(error)) => return Err(io_error(error)),
+        }
+    }
+}
+
+async fn acquire_async(lock: &File) -> Result<(), Error> {
+    loop {
+        match lock.try_lock() {
+            Ok(()) => return Ok(()),
+            Err(std::fs::TryLockError::WouldBlock) => {
+                tokio::time::sleep(Duration::from_millis(5)).await
             }
             Err(std::fs::TryLockError::Error(error)) => return Err(io_error(error)),
         }
