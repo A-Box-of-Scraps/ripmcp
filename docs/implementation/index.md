@@ -9,7 +9,7 @@ for the user and subsequent agents, not product documentation.
 
 Baseline inspected on 2026-09-08: `src/main.rs` prints `Hello, world!`;
 `Cargo.toml` has no dependencies. Repository lint infrastructure exists, but no
-feature implementation or feature tests exist. All phases below are **not started**.
+feature implementation or feature tests exist. Phase 01 has a tested foundation but is blocked on contract completion; later phases are not started.
 Creating this plan does not complete any implementation task.
 
 The user's command list overrides earlier tentative command spellings in
@@ -20,7 +20,7 @@ technical choices below are not silently promoted to user-approved decisions.
 
 | Phase | Grouped work | Dependencies | Status |
 | --- | --- | --- | --- |
-| [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Not started |
+| [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Blocked: command list and remaining contracts |
 | [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Not started |
 | [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Not started |
 | [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Not started |
@@ -55,7 +55,7 @@ Tracker maintenance is allowed during implementation. Do not add product docs,
 README changes, tutorials, an agent skill, or changelog/release prose as phase
 work. Product documentation is the user's final step after code is complete.
 
-## Proposed architecture (approve in phase 01)
+## Approved architecture
 
 ```mermaid
 flowchart TD
@@ -115,11 +115,11 @@ code; use explicit types for non-primitive local bindings from the start.
 
 ## Decisions to approve before dependent work
 
-All entries start **proposed / unresolved**. Phase 01 records the approved choice
-and converts it into executable contracts/tests. Stop only the affected work when
-a decision is blocked, not all independent development.
+D01-D10 are **approved** by the user on September 8, 2026. Approval preserves
+the technical verification gates in D05, D08, and D10. Phase 01 converts these
+choices into executable contracts/tests. Stop only affected work when blocked.
 
-| ID | Decision and recommended default | Blocks |
+| ID (approved) | Approved decision | Blocks |
 | --- | --- | --- |
 | D01 | Linux-only v1; fail clearly on unsupported systems. One per-user supervisor with isolated scoped server identities. | 02, 04, 08 |
 | D02 | Native versioned JSON config. Nearest ancestor `.ripmcp/config.json`, search through filesystem root, do not combine nested projects. Project server definitions replace same-named user definitions as a whole, rather than merging credentials/commands. Reject malformed selected config; do not silently fall back. | 02 |
