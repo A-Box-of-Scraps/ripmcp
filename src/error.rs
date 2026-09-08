@@ -19,18 +19,29 @@ pub enum ErrorKind {
 #[derive(Debug)]
 pub struct Error {
     pub kind: ErrorKind,
-    pub message: &'static str,
+    pub message: std::borrow::Cow<'static, str>,
 }
 
 impl Error {
+    pub fn field(path: &str) -> Self {
+        let safe: String = serde_json::to_string(path).unwrap_or_default();
+        Self {
+            kind: ErrorKind::Configuration,
+            message: std::borrow::Cow::Owned(format!("invalid configuration field {safe}")),
+        }
+    }
+
     pub const fn new(kind: ErrorKind, message: &'static str) -> Self {
-        Self { kind, message }
+        Self {
+            kind,
+            message: std::borrow::Cow::Borrowed(message),
+        }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.message)
+        formatter.write_str(&self.message)
     }
 }
 

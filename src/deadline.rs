@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::num::NonZeroU64;
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Timeouts {
     pub operation_seconds: NonZeroU64,

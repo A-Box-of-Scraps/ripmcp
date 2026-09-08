@@ -8,9 +8,10 @@ and shell-friendly tool invocation. This directory is the implementation tracker
 for the user and subsequent agents, not product documentation.
 
 The original baseline was an entry-point stub with no application dependencies.
-Phase 01 is complete with typed CLI requests, errors/output contracts and
-isolated fixtures. Operational handlers still explicitly return unsupported;
-later phases are not started. See the phase handoff for validation evidence.
+Phases 01 and 02 are complete: typed CLI requests, errors/output contracts,
+isolated fixtures, configuration/storage/trust and ownership foundations. Passive
+`servers` and interactive `trust` are operational; other handlers still explicitly
+return unsupported. See the phase handoffs for validation evidence.
 
 The user's [confirmed command list](commands.md) overrides tentative spellings in
 `docs/ideas/`. Agreed requirements in those notes remain requirements. Proposed
@@ -21,7 +22,7 @@ technical choices below are not silently promoted to user-approved decisions.
 | Phase | Grouped work | Dependencies | Status |
 | --- | --- | --- | --- |
 | [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Done |
-| [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Not started |
+| [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Done |
 | [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Not started |
 | [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Not started |
 | [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Not started |
@@ -135,8 +136,9 @@ choices into executable contracts/tests. Stop only affected work when blocked.
 Additional engineering choices are recorded in [foundation contracts](contracts.md):
 timeout config/defaults, exit codes, shape bounds, delegated version resolution,
 verification process retention, remote ownership, secret references and untrusted
-reads. D05/D08 library audits and D10 security tests remain explicit downstream
-integration gates; they do not block independent phase 02 configuration work.
+reads. D05/D08 library audits remain downstream integration gates. Phase 02 validated
+D10 directory creation, ownership/mode checks, no-follow access and locking;
+phase 04 must still verify socket peers and stale-socket handling.
 
 ## Validation gate for every implementation phase
 

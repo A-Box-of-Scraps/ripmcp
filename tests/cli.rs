@@ -62,8 +62,6 @@ fn command_forms_have_explicit_unsupported_errors() {
         &["disable", "s", "--user"],
         &["start", "s"],
         &["stop", "s"],
-        &["servers"],
-        &["trust"],
         &["tools"],
         &["tools", "s"],
         &["tools", "s", "--all"],

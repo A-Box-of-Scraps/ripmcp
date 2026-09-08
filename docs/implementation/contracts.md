@@ -137,10 +137,10 @@ registration and secure-store behavior. Ask the user if the requested revision i
 unavailable or incompatible; do not substitute an older revision. These affected
 integrations remain gated, while phase 02 configuration work can proceed.
 
-D10's runtime fallback candidate is `/tmp/ripmcp-<numeric-uid>/`, ignoring `TMPDIR`.
-Phase 02 must test exclusive creation, private ownership/mode, symlink and foreign
-owner rejection, and locking; phase 04 must verify socket peers and stale-socket
-handling. This candidate is not approved for use until those security tests pass.
+D10's runtime fallback is `/tmp/ripmcp-<numeric-effective-uid>/`, ignoring `TMPDIR`.
+Phase 02 passed directory creation, private ownership/mode, symlink and foreign
+owner rejection, and locking tests. Phase 04 must still verify socket peers and
+stale-socket handling before using this directory for supervisor communication.
 
 ## Fixture boundaries
 
@@ -158,3 +158,72 @@ handling. This candidate is not approved for use until those security tests pass
   fixture transport and fault plumbing, not a compliant MCP or OAuth implementation.
   Full handshake, pagination, registration, callback validation and cancellation
   scenarios belong to phases 03 and 05 after the protocol audit.
+
+
+## Phase 02 concrete configuration and storage contracts
+
+Recorded September 8, 2026 as implementation choices under D01-D03/D09-D10.
+Executable schemas and tests, rather than these notes, define field validation.
+
+- User/project documents share `Configuration`: required `schema_version: 1`,
+  optional `servers` map and optional non-null `timeouts`. Unknown fields,
+  duplicate map entries, trailing documents and unsupported versions fail closed.
+- A native server object has `enabled` (default true), `disabled_tools` (default
+  empty), and required `definition`. Local definitions contain `kind: "local"`,
+  `runtime: "npx" | "uvx" | "docker"`, `package`, `transport: "stdio"`, optional
+  `args`, reference-only `env`, and optional absolute `cwd`. Remote definitions
+  contain `kind: "remote"`, HTTP(S) `url`, `transport: "streamable_http"`, optional
+  reference-only `headers`, and `authentication: "none" | "oauth"` (default none).
+  No generated OAuth state or inline credential field exists in these schemas.
+- Secret references are one-key objects. Environment names use the foundation
+  grammar. Keyring identifiers use nonempty ASCII letters/digits/underscore/dot/
+  hyphen, excluding `.` and `..`; they are opaque IDs, not paths or URLs. Generic
+  keyring resolution currently fails unsupported. Phase 05 must implement secure
+  storage and independently validate OAuth resource/issuer/client binding; an
+  opaque lookup ID alone must never authorize OAuth credential reuse.
+- Discovery canonicalizes the working directory, then visits every ancestor to
+  filesystem root. A `.ripmcp` directory without `config.json` does not select a
+  project. A selected malformed configuration is an error. Configuration storage
+  paths/files reject symlinks; a symlink alias of a project working directory
+  resolves to the same canonical root, not a new approval identity.
+- Effective server identity includes canonical scope/provenance, name and SHA-256
+  of the exact source bytes. Overrides replace the complete server object. Project
+  timeouts replace user timeouts only after approval. Passive reports omit
+  definitions, endpoints, arguments, environment values and credential references.
+- Trust state is private `XDG_STATE_HOME/ripmcp/trust.json`, with schema version
+  and canonical-root-to-content-digest approvals. State under the selected project
+  root is rejected. Previews expose runtime/package or endpoint origin, policy,
+  reference field names and content/endpoint digests. Arguments, reference IDs,
+  URL paths/queries and URL package details are conservatively redacted, with an
+  explicit instruction to inspect the local configuration before approving.
+- Each operation must load a fresh effective snapshot. `authorize` rejects an
+  untrusted override without falling back; the resulting handle exposes only that
+  parsed snapshot. Enablement/tool checks are separate so stop/status can later
+  inspect a disabled server without allowing execution. Secret resolution requires
+  an authorized, enabled handle. Approvals never reread bytes after preview.
+- Scope writes default to user; project writes require a discovered, trusted,
+  unchanged selection. Mutations reread under the target file lock, reject duplicate
+  registration, report trusted project shadowing, and report reapproval when
+  project bytes actually change. No-op writes do not invalidate identical content.
+- Reads do not create directories. Absolute valid XDG overrides win; empty/relative
+  overrides use HOME defaults. Missing HOME is an error only when a needed path
+  lacks its own override. Runtime resolution does not require HOME. New directories
+  are 0700; sensitive state and locks require the effective UID and exact 0700/0600
+  directory/file modes. Existing unsafe state is rejected, not silently chmodded.
+- Files are opened relative to no-follow directory descriptors, bounded to 4 MiB,
+  and checked for regular-file type and a single link. Per-file `.NAME.lock` files
+  serialize cooperating writers. Writes use an exclusive `.NAME.pending`, file
+  fsync, rename in the same directory, and directory fsync. An interrupted pending
+  file never becomes authoritative; a subsequent changed write removes it while
+  holding the lock. Corrupt/incompatible committed state is preserved and errors.
+- Storage APIs accept an existing operation deadline; convenience operations use
+  60 seconds, while scoped writes use effective operation settings. Lock acquisition
+  and precommit checks consume that deadline. Synchronous filesystem system calls
+  are not preempted; signal/async integration remains phase 03 work.
+- `ownership.json` is a private versioned journal, independent of configuration
+  registration. Installation IDs are immutable 128-bit random lowercase hex IDs.
+  Records retain scope, origin/resolution, registration state, typed tracked path
+  or runtime resources, ownership classification, retained-data references, cleanup
+  states and operation intents/progress. Unregistering retains records and retries;
+  paths need not still exist on journal reload. No recursive resource scanning or
+  actual installation/deletion is introduced in phase 02.
