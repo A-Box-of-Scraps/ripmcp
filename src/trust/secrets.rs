@@ -21,6 +21,12 @@ impl fmt::Debug for Secret {
 pub trait SecretBackend {
     fn environment(&self, name: &str) -> Result<Secret, Error>;
     fn keyring(&self, id: &str) -> Result<Secret, Error>;
+    fn keyring_async<'a>(&'a self, id: &'a str) -> crate::auth::StoreFuture<'a, Secret>
+    where
+        Self: Sync,
+    {
+        Box::pin(async move { self.keyring(id) })
+    }
 }
 
 pub struct EnvironmentOnly;
@@ -36,12 +42,38 @@ impl SecretBackend for EnvironmentOnly {
     fn keyring(&self, _: &str) -> Result<Secret, Error> {
         Err(Error::new(
             ErrorKind::Unsupported,
-            "secure keyring backend is not implemented yet",
+            "keyring references require asynchronous secure resolution",
         ))
+    }
+    fn keyring_async<'a>(&'a self, id: &'a str) -> crate::auth::StoreFuture<'a, Secret> {
+        Box::pin(crate::auth::SystemStore::reference(id))
     }
 }
 
 impl AuthorizedServer<'_> {
+    pub async fn resolve_secrets_async(
+        &self,
+        backend: &(impl SecretBackend + Sync),
+        operation: &crate::mcp::Operation,
+    ) -> Result<BTreeMap<String, Secret>, Error> {
+        self.require_enabled(None)?;
+        let references: &BTreeMap<String, SecretReference> = match &self.server().definition {
+            Definition::Local { env, .. } => env,
+            Definition::Remote { headers, .. } => headers,
+        };
+        let mut values: BTreeMap<String, Secret> = BTreeMap::new();
+        for (name, reference) in references {
+            operation.remaining()?;
+            let value: Secret = match reference {
+                SecretReference::Environment(name) => backend.environment(name)?,
+                SecretReference::Keyring(id) => operation.run(backend.keyring_async(id)).await?,
+            };
+            validate(&value, &self.server().definition)?;
+            values.insert(name.clone(), value);
+        }
+        Ok(values)
+    }
+
     pub fn resolve_secrets(
         &self,
         backend: &impl SecretBackend,
@@ -58,17 +90,22 @@ impl AuthorizedServer<'_> {
                     SecretReference::Environment(name) => backend.environment(name)?,
                     SecretReference::Keyring(id) => backend.keyring(id)?,
                 };
-                if value.expose().contains('\0')
-                    || matches!(&self.server().definition, Definition::Remote { .. })
-                        && value.expose().chars().any(char::is_control)
-                {
-                    return Err(Error::new(
-                        ErrorKind::Authentication,
-                        "secret is invalid for its transport field",
-                    ));
-                }
+                validate(&value, &self.server().definition)?;
                 Ok((name.clone(), value))
             })
             .collect()
     }
+}
+
+fn validate(value: &Secret, definition: &Definition) -> Result<(), Error> {
+    if value.expose().contains('\0')
+        || matches!(definition, Definition::Remote { .. })
+            && value.expose().chars().any(char::is_control)
+    {
+        return Err(Error::new(
+            ErrorKind::Authentication,
+            "secret is invalid for its transport field",
+        ));
+    }
+    Ok(())
 }

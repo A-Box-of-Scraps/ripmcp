@@ -47,6 +47,10 @@ async fn execute(command: Command, timeout: Option<u64>) -> Result<(), Error> {
         return crate::output::json(&mut std::io::stdout().lock(), &value);
     }
     let (name, action): (String, Action) = action(command, &effective, &operation).await?;
+    if !effective.is_local(&name) {
+        let value: Value = crate::auth::remote::execute(cwd, &name, &action, &operation).await?;
+        return write_result(&action, &value);
+    }
     let environment: BTreeMap<String, String> = if matches!(action, Action::Stop) {
         BTreeMap::new()
     } else {
@@ -66,6 +70,14 @@ async fn execute(command: Command, timeout: Option<u64>) -> Result<(), Error> {
         crate::output::tool_result(&mut std::io::stdout().lock(), &value)
     } else {
         crate::output::json(&mut std::io::stdout().lock(), &value)
+    }
+}
+
+fn write_result(action: &Action, value: &Value) -> Result<(), Error> {
+    if matches!(action, Action::Call { .. }) {
+        crate::output::tool_result(&mut std::io::stdout().lock(), value)
+    } else {
+        crate::output::json(&mut std::io::stdout().lock(), value)
     }
 }
 
@@ -99,12 +111,6 @@ async fn action(
         _ => return Err(unsupported()),
     };
     effective.identity(&name)?;
-    if !effective.is_local(&name) {
-        return Err(Error::new(
-            ErrorKind::Unsupported,
-            "remote servers have no local lifecycle; remote invocation integration is pending",
-        ));
-    }
     if !matches!(action, Action::Stop) {
         effective.authorize(&name)?.require_enabled(None)?;
     }

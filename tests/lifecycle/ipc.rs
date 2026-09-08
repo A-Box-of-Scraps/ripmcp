@@ -52,6 +52,18 @@ async fn ipc_rechecks_policy_instead_of_accepting_a_stale_client_snapshot() {
 }
 
 #[tokio::test]
+async fn repeated_bootstrap_observes_published_socket_records() {
+    for _ in 0..16 {
+        let fixture: Fixture = Fixture::new();
+        connection(&fixture)
+            .await
+            .shutdown(&operation(5000))
+            .await
+            .unwrap();
+    }
+}
+
+#[tokio::test]
 async fn per_server_queue_is_bounded_and_disconnect_releases_queued_work() {
     let fixture: Fixture = Fixture::new();
     fixture.configure("cancel_ack");

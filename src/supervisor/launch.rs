@@ -20,11 +20,12 @@ pub(super) struct Prepared {
 }
 
 impl Prepared {
-    pub fn load(
+    pub async fn load(
         server: &AuthorizedServer<'_>,
         paths: &Paths,
         environment: &BTreeMap<String, String>,
         key: &str,
+        operation: &crate::mcp::Operation,
     ) -> Result<Self, Error> {
         server.require_enabled(None)?;
         let Definition::Local {
@@ -44,15 +45,8 @@ impl Prepared {
         let journal: Journal = OwnershipStore::new(paths)?.read()?;
         let installation: &Installation = installation(&journal, server)?;
         let (resolved, executable): (&str, &PathBuf) = resolution(installation, *runtime, package)?;
-        let mut env: BTreeMap<OsString, OsString> = environment
-            .iter()
-            .filter(|(name, _)| BASE_ENV.contains(&name.as_str()))
-            .map(|(key, value)| (key.into(), value.into()))
-            .collect();
-        let secrets: BTreeMap<String, Secret> = server.resolve_secrets(&References(environment))?;
-        for (key, secret) in secrets {
-            env.insert(key.into(), secret.expose().into());
-        }
+        let env: BTreeMap<OsString, OsString> =
+            resolved_environment(server, environment, operation).await?;
         let mut command: Vec<OsString> = vec![executable.as_os_str().to_owned()];
         if *runtime == Runtime::Npx {
             command.push("--yes".into());
@@ -106,6 +100,25 @@ impl Prepared {
             installation: installation.id().clone(),
         })
     }
+}
+
+async fn resolved_environment(
+    server: &AuthorizedServer<'_>,
+    environment: &BTreeMap<String, String>,
+    operation: &crate::mcp::Operation,
+) -> Result<BTreeMap<OsString, OsString>, Error> {
+    let mut env: BTreeMap<OsString, OsString> = environment
+        .iter()
+        .filter(|(name, _)| BASE_ENV.contains(&name.as_str()))
+        .map(|(key, value)| (key.into(), value.into()))
+        .collect();
+    let secrets: BTreeMap<String, Secret> = server
+        .resolve_secrets_async(&References(environment), operation)
+        .await?;
+    for (key, secret) in secrets {
+        env.insert(key.into(), secret.expose().into());
+    }
+    Ok(env)
 }
 
 pub(super) const BASE_ENV: &[&str] = &[
@@ -258,6 +271,9 @@ impl SecretBackend for References<'_> {
     }
     fn keyring(&self, id: &str) -> Result<Secret, Error> {
         EnvironmentOnly.keyring(id)
+    }
+    fn keyring_async<'a>(&'a self, id: &'a str) -> crate::auth::StoreFuture<'a, Secret> {
+        EnvironmentOnly.keyring_async(id)
     }
 }
 

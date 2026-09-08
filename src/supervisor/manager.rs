@@ -87,7 +87,12 @@ impl Manager {
             return Ok(action(&request.server, "stop", false));
         }
         let server: AuthorizedServer<'_> = effective.authorize(&request.server)?;
-        let prepared: Prepared = Prepared::load(&server, &self.paths, &request.environment, &key)?;
+        let prepared: Prepared =
+            Prepared::load(&server, &self.paths, &request.environment, &key, operation).await?;
+        let current: Effective = self.effective(&request)?;
+        if current.identity(&request.server)? != server.identity() {
+            return Err(changed());
+        }
         self.execute(&mut state, prepared, &request, &key, operation)
             .await
     }

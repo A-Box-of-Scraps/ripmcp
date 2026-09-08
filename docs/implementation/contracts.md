@@ -333,3 +333,43 @@ The pidfd zombie-retention precondition is enforced with an installed SIGCHLD
 handler and no reaping before group signals. The pinned signal-hook-registry
 implementation replaces SIGCHLD flags without SA_NOCLDWAIT. Default validation
 uses fake runtime executables, not a real Docker daemon or package registry.
+
+
+## Phase 05 authentication integration contracts
+
+Completed September 8, 2026. The exact authorization profile, library audit,
+provider limitations and test matrix are in `05-authentication.md`.
+
+- Login is explicit and uses the published HTTPS client metadata identity, S256
+  PKCE and the fixed loopback redirect. Native public DCR is a compatibility
+  fallback; pre-registration-only and private-network OAuth providers are
+  unsupported. No device flow, remote-headless redirect or implicit login exists.
+- Use `auth::remote::options` for remote installation verification and qualified
+  operations. Its provider rechecks configuration/trust before credential access
+  and before transmission. Never attach OAuth tokens as configured extra headers,
+  substitute another endpoint, or replay a request after a challenge/failure.
+- OAuth records bind endpoint, canonical resource, exact issuer, client ID and
+  token endpoint. Identical endpoints share records across names and trusted
+  scopes, not across resources or issuers. Status is local and explicitly does
+  not claim remote validity; logout affects every alias for that endpoint.
+- Secret Service's unlocked default collection and encrypted session are required.
+  There is no plaintext fallback. OAuth and generic keyring references use
+  separate `oauth-v1` and `references-v1` attribute namespaces under
+  `application=ripmcp`; `identity` is respectively the endpoint hash or opaque ID.
+  Provisioning generic keyring secrets remains external; reads never unlock or
+  create a collection. Use `AuthorizedServer::resolve_secrets_async` for real
+  keyring references; the synchronous environment-only backend fails explicitly.
+- Login generation checks, per-endpoint cross-process locks and non-secret epoch
+  files prevent logout/refresh races and late cancelled D-Bus writes from restoring
+  old credentials. Locks/epochs use the validated per-user `/tmp` directory,
+  independently of XDG overrides, because the OS keyring is shared by the user.
+  Tokens themselves never enter those files or project configuration.
+- Refresh invalidates the old generation before sending, atomically replaces the
+  complete credential payload, and never retries an uncertain refresh. Any failed
+  refresh/persistence requires explicit login. OAuth logout replaces the secret
+  payload with an empty tombstone; it does not promise provider-side revocation or
+  cancellation of already-authorized requests. Later lookups always reread state.
+- Phase 06 must use the noninteractive provider for installation verification and
+  record the effective remote identity for later ownership/cleanup work. Do not
+  treat an auth nickname, opaque keyring ID, saved status or stale config snapshot
+  as permission to transmit credentials.

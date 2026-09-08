@@ -32,6 +32,17 @@ pub trait AuthenticationProvider: Send + Sync {
     ) -> ChallengeFuture<'a> {
         Box::pin(async { Ok(()) })
     }
+
+    fn challenged_with_authorization<'a>(
+        &'a self,
+        resource: &'a Url,
+        status: reqwest::StatusCode,
+        headers: &'a HeaderMap,
+        _authorization: Option<&'a HeaderValue>,
+        operation: &'a Operation,
+    ) -> ChallengeFuture<'a> {
+        self.challenged(resource, status, headers, operation)
+    }
 }
 
 pub struct NoAuthentication;
@@ -138,7 +149,8 @@ impl Http {
                         message["method"].as_str().ok_or_else(protocol_error)?,
                     )
                     .body(body);
-                if let Some(mut authorization) = authorization {
+                if let Some(authorization) = &authorization {
+                    let mut authorization: HeaderValue = authorization.clone();
                     authorization.set_sensitive(true);
                     request = request.header("authorization", authorization);
                 }
@@ -147,6 +159,7 @@ impl Http {
                 self.response(
                     response,
                     message["id"].as_str().ok_or_else(protocol_error)?,
+                    authorization.as_ref(),
                     operation,
                 )
                 .await
@@ -158,16 +171,18 @@ impl Http {
         &self,
         response: reqwest::Response,
         id: &str,
+        authorization: Option<&HeaderValue>,
         operation: &Operation,
     ) -> Result<Value, Error> {
         let status: reqwest::StatusCode = response.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             self.options
                 .authentication
-                .challenged(
+                .challenged_with_authorization(
                     &self.options.endpoint,
                     status,
                     response.headers(),
+                    authorization,
                     operation,
                 )
                 .await?;

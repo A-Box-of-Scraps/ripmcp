@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod call;
 pub mod cli;
 pub mod config;
@@ -31,6 +32,7 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::Unsupported, "v1 supports Linux only"));
     }
     match cli.command {
+        Some(Command::Auth { command }) => return auth::run(command, cli.timeout),
         Some(Command::Supervisor) => return supervisor::run(),
         Some(Command::Guard(guard)) => return supervisor::guard(guard),
         Some(

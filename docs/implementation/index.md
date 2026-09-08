@@ -8,12 +8,14 @@ and shell-friendly tool invocation. This directory is the implementation tracker
 for the user and subsequent agents, not product documentation.
 
 The original baseline was an entry-point stub with no application dependencies.
-Phases 01-04 are complete: typed CLI/error/output contracts, isolated fixtures,
+Phases 01-05 are complete: typed CLI/error/output contracts, isolated fixtures,
 configuration/storage/trust and ownership foundations, the tools-focused MCP
-client, and persistent local supervisor lifecycle. Passive `servers`, interactive
-`trust`, local `start`/`stop`, and qualified local tool operations are operational.
+client, persistent local supervisor lifecycle, and secure remote OAuth. Passive
+`servers`, interactive `trust`, local `start`/`stop`, and qualified local tool
+operations are operational.
 Local execution requires a prepared immutable installation record; phase 06 will
-implement preparation and registration. Remote CLI integration, authentication,
+implement preparation and registration. Qualified remote tool operations and
+explicit auth login/status/logout are now operational. Installation,
 cross-server/shorthand workflow and cleanup remain in their respective phases.
 See the phase handoffs for validation evidence and integration contracts.
 
@@ -29,7 +31,7 @@ technical choices below are not silently promoted to user-approved decisions.
 | [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Done |
 | [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Done |
 | [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Done |
-| [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Not started |
+| [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Done |
 | [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Not started |
 | [07](07-tool-workflow.md) | Tool policy, discovery, qualified/shorthand calls, shape | 03, 04, 05, 06 | Not started |
 | [08](08-cleanup.md) | Uninstall, clean uninstall, self-removal and recovery | 02, 04, 06, 07 | Not started |
@@ -140,10 +142,12 @@ choices into executable contracts/tests. Stop only affected work when blocked.
 Additional engineering choices are recorded in [foundation contracts](contracts.md):
 timeout config/defaults, exit codes, shape bounds, delegated version resolution,
 verification process retention, remote ownership, secret references and untrusted
-reads. Phase 03 verified D05's exact revision and transport profile; full OAuth
-and D08 library/storage audits remain phase 05 integration gates. Phase 02 validated
-D10 directory creation, ownership/mode checks, no-follow access and locking;
-phase 04 must still verify socket peers and stale-socket handling.
+reads. Phase 03 verified D05's exact revision and transport profile; phase 05
+verified the OAuth registration/storage profile and completed D08 with local
+fixtures and a fake secure-store adapter. Its handoff records provider limits and
+integration APIs. Phase 02 validated D10 directory creation, ownership/mode checks,
+no-follow access and locking; phase 04 completed socket peer and stale-socket
+validation.
 
 ## Validation gate for every implementation phase
 

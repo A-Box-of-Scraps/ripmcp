@@ -28,7 +28,7 @@ impl Manager {
                 self.require_clean(&key(effective.identity(&request.server)?)?)?;
             }
             let lease: std::fs::File = self.lease(lease_key, operation).await?;
-            self.recheck(request, &prepared.revision)?;
+            self.recheck(request, &prepared.revision, operation).await?;
             operation.remaining()?;
             // The daemon lifetime lock and slot mutex serialize the guard handoff.
             drop(lease);
@@ -41,7 +41,7 @@ impl Manager {
                 Client::stdio(prepared.options, limits, operation).await;
             state.failed = result.is_err();
             let client: Client = result?;
-            if let Err(error) = self.recheck(request, &prepared.revision) {
+            if let Err(error) = self.recheck(request, &prepared.revision, operation).await {
                 client.shutdown().await;
                 return Err(error);
             }
@@ -81,7 +81,7 @@ impl Manager {
         match &request.action {
             Action::Tools { all } => {
                 let mut discovery: Discovery = client.discover_tools(operation).await?;
-                self.recheck(request, revision)?;
+                self.recheck(request, revision, operation).await?;
                 let effective: Effective = self.effective(request)?;
                 let server: AuthorizedServer<'_> = effective.authorize(&request.server)?;
                 if !all {
@@ -93,14 +93,14 @@ impl Manager {
             }
             Action::Tool { tool } => {
                 let tool: Tool = client.tool(tool, operation).await?;
-                self.recheck(request, revision)?;
+                self.recheck(request, revision, operation).await?;
                 Ok(json!({"schema_version": 1, "tool": tool}))
             }
             Action::Call { tool, arguments } => {
                 let arguments: Value = crate::json::parse(arguments.as_bytes())
                     .map_err(|_| Error::new(ErrorKind::Usage, "invalid tool arguments"))?;
                 let tool: Tool = client.tool(tool, operation).await?;
-                self.recheck(request, revision)?;
+                self.recheck(request, revision, operation).await?;
                 let result: ToolResult = client.call_tool(&tool, arguments, operation).await?;
                 Ok(result.into_envelope())
             }
@@ -108,12 +108,20 @@ impl Manager {
         }
     }
 
-    fn recheck(&self, request: &LocalRequest, revision: &str) -> Result<(), Error> {
+    async fn recheck(
+        &self,
+        request: &LocalRequest,
+        revision: &str,
+        operation: &Operation,
+    ) -> Result<(), Error> {
         let effective: Effective = self.effective(request)?;
         let server: AuthorizedServer<'_> = effective.authorize(&request.server)?;
         let key: String = key(server.identity())?;
-        let prepared: Prepared = Prepared::load(&server, &self.paths, &request.environment, &key)?;
-        if prepared.revision != revision {
+        let prepared: Prepared =
+            Prepared::load(&server, &self.paths, &request.environment, &key, operation).await?;
+        let current: Effective = self.effective(request)?;
+        if current.identity(&request.server)? != server.identity() || prepared.revision != revision
+        {
             return Err(changed());
         }
         Ok(())

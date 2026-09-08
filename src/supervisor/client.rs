@@ -118,8 +118,10 @@ impl Connection {
 }
 
 async fn connect(endpoint: &Endpoint) -> Result<Option<Connection>, Error> {
+    // The daemon publishes the record before the socket; observe visibility first.
+    let published = endpoint.metadata()?.is_some();
     let record: Option<Record> = endpoint.record()?;
-    if endpoint.metadata()?.is_none() {
+    if !published {
         return Ok(None);
     }
     let record: Record = record.ok_or_else(invalid)?;
@@ -189,6 +191,9 @@ impl Launch {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
+        if let Some(address) = std::env::var_os("DBUS_SESSION_BUS_ADDRESS") {
+            command.env("DBUS_SESSION_BUS_ADDRESS", address);
+        }
         // Detach only the supervisor, never the shared MCP child, from CLI signals.
         unsafe {
             command.pre_exec(|| rustix::process::setsid().map(|_| ()).map_err(Into::into));

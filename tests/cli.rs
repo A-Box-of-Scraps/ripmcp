@@ -63,9 +63,6 @@ fn command_forms_have_explicit_unsupported_errors() {
         &["tools"],
         &["shape", "-"],
         &["shape", "missing.json"],
-        &["auth", "login", "s"],
-        &["auth", "status", "s"],
-        &["auth", "logout", "s"],
         &["--uninstall-everything", "-y"],
         &["--uninstall-everything"],
         &["call", "t", "--input", "missing"],
@@ -84,6 +81,9 @@ fn local_commands_reject_missing_configuration_without_side_effects() {
     let sandbox: Sandbox = Sandbox::new();
     for args in [
         &["start", "s"][..],
+        &["auth", "login", "s"],
+        &["auth", "status", "s"],
+        &["auth", "logout", "s"],
         &["stop", "s"],
         &["tools", "s"],
         &["tools", "s", "--all"],
