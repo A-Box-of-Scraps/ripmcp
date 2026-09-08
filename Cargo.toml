@@ -19,3 +19,6 @@ fn_params_excessive_bools = "deny"
 struct_excessive_bools = "deny"
 
 [dependencies]
+
+[workspace.metadata.dylint]
+libraries = [{ path = "lints/explicit-local-types" }]

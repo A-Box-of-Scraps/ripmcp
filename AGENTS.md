@@ -9,6 +9,7 @@ Here is an overview of the project:
 
 ```
 .cargo/config.toml
+lints/
 src/
 .gitignore
 .gitattributes
@@ -22,6 +23,7 @@ README.md
 
 ## Development
 
+- Do not make changes to README.md unless it is explicitly requested by the user.
 - Do not add comments unless they explain unexpected or complex behavior, or when documentation is explicitly requested by the user. In all cases, keep them concise.
 - Use explicit types for non-primitive `let` bindings.
 
@@ -33,6 +35,8 @@ Validate changes with:
 cargo fmt -q   # Format changes direcly instead of checking first and then fixing formatting issues.
 cargo clippy -q --all-targets -- -D warnings
 cargo test -q
+cargo dylint --all -- --locked --all-targets
+(cd lints/explicit-local-types && cargo fmt -q && cargo test -q --locked)
 ```
 
 ## Commits & Pull Requests
