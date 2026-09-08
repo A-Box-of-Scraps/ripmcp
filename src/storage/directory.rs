@@ -50,7 +50,7 @@ impl Directory {
         Ok(Some(bytes))
     }
 
-    pub(super) fn file(
+    pub(crate) fn file(
         &self,
         name: &str,
         flags: OFlags,
@@ -79,16 +79,21 @@ impl Directory {
         Ok(Some(file))
     }
 
-    pub(super) fn replace(&self, source: &str, target: &str) -> Result<(), Error> {
+    pub(crate) fn replace(&self, source: &str, target: &str) -> Result<(), Error> {
         renameat(&self.0, source, &self.0, target).map_err(io_error)?;
         self.0.sync_all().map_err(io_error)
     }
 
-    pub(super) fn remove(&self, name: &str) -> Result<(), Error> {
+    pub(crate) fn remove(&self, name: &str) -> Result<(), Error> {
         match unlinkat(&self.0, name, AtFlags::empty()) {
             Ok(()) | Err(Errno::NOENT) => Ok(()),
             Err(error) => Err(io_error(error)),
         }
+    }
+
+    pub(crate) fn descriptor_path(&self) -> std::path::PathBuf {
+        use std::os::fd::AsRawFd;
+        std::path::PathBuf::from(format!("/proc/self/fd/{}", self.0.as_raw_fd()))
     }
 }
 

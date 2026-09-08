@@ -8,6 +8,7 @@ pub mod mcp;
 pub mod output;
 pub mod ownership;
 pub mod storage;
+pub mod supervisor;
 pub mod trust;
 
 use cli::{Cli, Command};
@@ -30,6 +31,7 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::Unsupported, "v1 supports Linux only"));
     }
     match cli.command {
+        Some(Command::Supervisor) => return supervisor::run(),
         Some(Command::Servers) => {
             let paths: storage::Paths = storage::Paths::from_environment();
             let cwd: std::path::PathBuf = std::env::current_dir().map_err(storage::io_error)?;

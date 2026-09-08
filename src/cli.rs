@@ -16,6 +16,8 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
+    #[command(name = "__supervisor", hide = true)]
+    Supervisor,
     Install(Install),
     Uninstall(Uninstall),
     Enable(Policy),

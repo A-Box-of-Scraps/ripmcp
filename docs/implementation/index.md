@@ -15,6 +15,10 @@ interactive `trust` are operational; other CLI handlers still explicitly return
 unsupported pending their integration phases. See the phase handoffs for
 validation evidence and the verified modern protocol profile.
 
+Phase 04 is in progress. Its persistent control-plane supervisor, authenticated
+IPC/bootstrap and maintenance-barrier primitive are implemented and tested;
+managed MCP processes, public start/stop and operational status are still pending.
+
 The user's [confirmed command list](commands.md) overrides tentative spellings in
 `docs/ideas/`. Agreed requirements in those notes remain requirements. Proposed
 technical choices below are not silently promoted to user-approved decisions.
@@ -26,7 +30,7 @@ technical choices below are not silently promoted to user-approved decisions.
 | [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Done |
 | [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Done |
 | [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Done |
-| [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Not started |
+| [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | In progress |
 | [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Not started |
 | [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Not started |
 | [07](07-tool-workflow.md) | Tool policy, discovery, qualified/shorthand calls, shape | 03, 04, 05, 06 | Not started |

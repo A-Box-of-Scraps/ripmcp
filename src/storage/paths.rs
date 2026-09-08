@@ -17,6 +17,10 @@ pub struct Paths {
 }
 
 impl Paths {
+    pub(crate) fn environment(&self) -> &BTreeMap<OsString, OsString> {
+        &self.environment
+    }
+
     pub fn from_environment() -> Self {
         Self {
             environment: [
