@@ -21,6 +21,8 @@ pub(super) fn spawn(
     logs: Arc<Mutex<StderrLog>>,
     limit: usize,
 ) -> Result<JoinHandle<()>, Error> {
+    let grace: Duration = options.shutdown_grace;
+    let termination: Duration = options.termination_grace;
     let mut command: Command = Command::new(options.program);
     command
         .args(options.args)
@@ -55,7 +57,7 @@ pub(super) fn spawn(
         if !writer.is_finished() {
             let _: Result<Result<(), Error>, tokio::task::JoinError> = writer.await;
         }
-        terminate(&mut child).await;
+        terminate(&mut child, grace, termination).await;
         logger.abort();
     }))
 }
@@ -136,11 +138,8 @@ async fn log(mut stderr: ChildStderr, logs: Arc<Mutex<StderrLog>>) {
     }
 }
 
-async fn terminate(child: &mut Child) {
-    if tokio::time::timeout(Duration::from_millis(250), child.wait())
-        .await
-        .is_ok()
-    {
+async fn terminate(child: &mut Child, grace: Duration, termination: Duration) {
+    if tokio::time::timeout(grace, child.wait()).await.is_ok() {
         return;
     }
     if let Some(pid) = child
@@ -150,7 +149,7 @@ async fn terminate(child: &mut Child) {
         let _: std::io::Result<()> =
             rustix::process::kill_process(pid, rustix::process::Signal::TERM).map_err(Into::into);
     }
-    if tokio::time::timeout(Duration::from_millis(250), child.wait())
+    if tokio::time::timeout(termination, child.wait())
         .await
         .is_err()
     {

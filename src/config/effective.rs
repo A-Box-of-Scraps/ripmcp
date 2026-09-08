@@ -48,6 +48,19 @@ pub struct AuthorizedServer<'a> {
 }
 
 impl Effective {
+    pub fn identity(&self, name: &str) -> Result<&Identity, Error> {
+        self.entries
+            .get(name)
+            .map(|entry| &entry.identity)
+            .ok_or_else(|| Error::new(ErrorKind::Configuration, "server is not configured"))
+    }
+
+    pub fn is_local(&self, name: &str) -> bool {
+        self.entries
+            .get(name)
+            .is_some_and(|entry| matches!(entry.server.definition, super::Definition::Local { .. }))
+    }
+
     pub fn load(paths: &Paths, start: &Path) -> Result<Self, Error> {
         let bytes: Option<Vec<u8>> = user_store(paths)?.read()?;
         let user: Configuration = bytes

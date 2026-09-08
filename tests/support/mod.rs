@@ -3,12 +3,14 @@ use tempfile::TempDir;
 
 pub struct Sandbox {
     pub root: TempDir,
+    runtime: TempDir,
 }
 
 impl Sandbox {
     pub fn new() -> Self {
         Self {
             root: tempfile::tempdir().unwrap(),
+            runtime: tempfile::tempdir().unwrap(),
         }
     }
 
@@ -24,10 +26,13 @@ impl Sandbox {
             "XDG_DATA_HOME",
             "XDG_STATE_HOME",
             "XDG_CACHE_HOME",
-            "XDG_RUNTIME_DIR",
         ] {
             command.env(key, self.root.path().join(key));
         }
-        command.args(args).output().unwrap()
+        command
+            .env("XDG_RUNTIME_DIR", self.runtime.path())
+            .args(args)
+            .output()
+            .unwrap()
     }
 }

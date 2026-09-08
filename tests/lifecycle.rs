@@ -2,6 +2,19 @@ use ripmcp::supervisor::Barrier;
 use std::time::Duration;
 use tokio::sync::{OwnedRwLockReadGuard, OwnedRwLockWriteGuard};
 
+#[path = "lifecycle/container.rs"]
+mod container;
+#[path = "lifecycle/fixture.rs"]
+mod fixture;
+#[path = "lifecycle/input.rs"]
+mod input;
+#[path = "lifecycle/ipc.rs"]
+mod ipc;
+#[path = "lifecycle/local.rs"]
+mod local;
+#[path = "lifecycle/recovery.rs"]
+mod recovery;
+
 #[tokio::test]
 async fn maintenance_waits_for_operations_and_blocks_new_work() {
     let barrier: Barrier = Barrier::default();

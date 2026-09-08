@@ -306,3 +306,31 @@ async fn bootstrap_lock_wait_consumes_the_operation_deadline() {
     ));
     assert!(!fixture.runtime().join("supervisor.sock").exists());
 }
+
+#[tokio::test]
+async fn changing_runtime_directory_cannot_create_a_second_supervisor_for_the_same_state() {
+    let fixture: Fixture = Fixture::new();
+    fixture.ensure().await.ping(&operation()).await.unwrap();
+    let runtime: TempDir = tempfile::tempdir().unwrap();
+    let mut alternate: BTreeMap<OsString, OsString> = environment(fixture.root.path());
+    alternate.insert(
+        OsString::from("XDG_RUNTIME_DIR"),
+        runtime.path().as_os_str().to_owned(),
+    );
+    let result: Result<Connection, Error> = Connection::ensure(
+        &Paths::new(alternate),
+        Path::new(env!("CARGO_BIN_EXE_ripmcp")),
+        &operation(),
+    )
+    .await;
+    assert!(matches!(
+        result,
+        Err(Error {
+            kind: ErrorKind::Connection,
+            ..
+        })
+    ));
+    assert!(!runtime.path().join("ripmcp/supervisor.sock").exists());
+    fixture.ensure().await.ping(&operation()).await.unwrap();
+    fixture.stop().await;
+}

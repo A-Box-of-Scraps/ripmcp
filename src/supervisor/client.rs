@@ -15,6 +15,49 @@ pub struct Connection {
 }
 
 impl Connection {
+    pub async fn local(
+        mut self,
+        request: super::LocalRequest,
+        operation: &Operation,
+    ) -> Result<serde_json::Value, Error> {
+        let request: Request = Request::Local {
+            request: Box::new(request),
+            budget: operation.remaining()?,
+            sent: wire::now(),
+        };
+        self.data(request, operation).await
+    }
+
+    pub async fn status(
+        mut self,
+        cwd: std::path::PathBuf,
+        operation: &Operation,
+    ) -> Result<serde_json::Value, Error> {
+        self.data(Request::Status { cwd }, operation).await
+    }
+
+    async fn data(
+        &mut self,
+        request: Request,
+        operation: &Operation,
+    ) -> Result<serde_json::Value, Error> {
+        operation
+            .run(async {
+                wire::write_limit(&mut self.stream, &request, wire::DATA_LIMIT).await?;
+                let response: wire::Response =
+                    wire::read_limit(&mut self.stream, wire::DATA_LIMIT).await?;
+                match response {
+                    wire::Response::Success(json) => {
+                        crate::json::parse(json.as_bytes()).map_err(|_| incompatible())
+                    }
+                    wire::Response::Failure { kind, message } => Err(Error {
+                        kind,
+                        message: std::borrow::Cow::Owned(message),
+                    }),
+                }
+            })
+            .await
+    }
     pub async fn existing(paths: &Paths, operation: &Operation) -> Result<Option<Self>, Error> {
         operation.remaining()?;
         let Some(endpoint): Option<Endpoint> = Endpoint::open(paths, false)? else {
@@ -29,6 +72,7 @@ impl Connection {
         operation: &Operation,
     ) -> Result<Self, Error> {
         operation.remaining()?;
+        super::guardian::check_support()?;
         let endpoint: Endpoint = Endpoint::open(paths, true)?.ok_or_else(invalid)?;
         let lock: File = endpoint.lock(".bootstrap.lock")?;
         operation

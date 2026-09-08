@@ -1,10 +1,19 @@
+mod barrier;
 mod client;
+mod command;
 mod endpoint;
+mod guardian;
+mod input;
+mod launch;
+mod manager;
 mod service;
 mod wire;
 
+pub use barrier::Barrier;
 pub use client::Connection;
-pub use service::Barrier;
+pub use command::run as command;
+pub use guardian::run as guard;
+pub use manager::{Action, LocalRequest};
 
 use crate::error::{Error, ErrorKind};
 

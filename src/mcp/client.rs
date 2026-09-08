@@ -22,6 +22,23 @@ pub struct Client {
 }
 
 impl Client {
+    pub async fn settle(&self, operation: &Operation) -> Result<(), Error> {
+        match &self.transport {
+            Transport::Stdio(transport) => transport.settle(operation).await,
+            Transport::Http(_) => Ok(()),
+        }
+    }
+
+    pub fn has_abandoned(&self) -> bool {
+        matches!(&self.transport, Transport::Stdio(transport) if transport.has_abandoned())
+    }
+    pub fn is_closed(&self) -> bool {
+        self.closed.load(Ordering::Acquire)
+            || match &self.transport {
+                Transport::Stdio(transport) => transport.is_closed(),
+                Transport::Http(_) => false,
+            }
+    }
     pub async fn stdio(
         options: StdioOptions,
         limits: Limits,

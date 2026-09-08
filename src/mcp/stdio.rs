@@ -20,6 +20,8 @@ pub struct StdioOptions {
     pub args: Vec<OsString>,
     pub env: BTreeMap<OsString, OsString>,
     pub cwd: Option<PathBuf>,
+    pub shutdown_grace: std::time::Duration,
+    pub termination_grace: std::time::Duration,
 }
 
 impl StdioOptions {
@@ -29,6 +31,8 @@ impl StdioOptions {
             args: Vec::new(),
             env: BTreeMap::new(),
             cwd: None,
+            shutdown_grace: std::time::Duration::from_millis(250),
+            termination_grace: std::time::Duration::from_millis(250),
         }
     }
 }
@@ -50,6 +54,21 @@ pub(super) struct Stdio {
 }
 
 impl Stdio {
+    pub(super) async fn settle(&self, operation: &Operation) -> Result<(), Error> {
+        operation
+            .run(async {
+                self.registry.settle().await;
+                Ok(())
+            })
+            .await
+    }
+
+    pub(super) fn has_abandoned(&self) -> bool {
+        self.registry.has_abandoned()
+    }
+    pub(super) fn is_closed(&self) -> bool {
+        self.registry.is_closed()
+    }
     pub(super) fn spawn(options: StdioOptions, limits: Limits) -> Result<Self, Error> {
         let registry: Arc<Registry> = Arc::new(Registry::default());
         let (writer, receiver): (mpsc::Sender<WriteMessage>, mpsc::Receiver<WriteMessage>) =

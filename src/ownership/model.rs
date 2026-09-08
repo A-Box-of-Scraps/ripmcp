@@ -98,6 +98,8 @@ pub enum Origin {
         runtime: crate::config::schema::Runtime,
         requested: String,
         resolved: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        executable: Option<PathBuf>,
     },
     Remote {
         resource: String,

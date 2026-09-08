@@ -169,15 +169,30 @@ impl Client {
             ));
         }
         let tool: Tool = self.tool(name, operation).await?;
+        self.call_tool(&tool, arguments, operation).await
+    }
+
+    pub async fn call_tool(
+        &self,
+        tool: &Tool,
+        arguments: Value,
+        operation: &Operation,
+    ) -> Result<ToolResult, Error> {
+        if !arguments.is_object() {
+            return Err(Error::new(
+                ErrorKind::Usage,
+                "tool arguments must be a JSON object",
+            ));
+        }
         let headers: HeaderMap = if self.is_http() {
-            headers::tool_headers(&tool, &arguments)?
+            headers::tool_headers(tool, &arguments)?
         } else {
             HeaderMap::new()
         };
         let result: Value = self
             .request(
                 "tools/call",
-                json!({"name": name, "arguments": arguments}),
+                json!({"name": tool.name(), "arguments": arguments}),
                 headers,
                 operation,
             )

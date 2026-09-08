@@ -32,24 +32,18 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
     }
     match cli.command {
         Some(Command::Supervisor) => return supervisor::run(),
-        Some(Command::Servers) => {
-            let paths: storage::Paths = storage::Paths::from_environment();
-            let cwd: std::path::PathBuf = std::env::current_dir().map_err(storage::io_error)?;
-            let effective: config::Effective = config::Effective::load(&paths, &cwd)?;
-            return output::json(
-                &mut std::io::stdout().lock(),
-                &ServersReport {
-                    schema_version: 1,
-                    servers: effective.reports(),
-                },
-            );
-        }
+        Some(Command::Guard(guard)) => return supervisor::guard(guard),
+        Some(
+            command @ (Command::Servers
+            | Command::Start(_)
+            | Command::Stop(_)
+            | Command::Tools(_)
+            | Command::Tool(_)
+            | Command::Call(_)),
+        ) => return supervisor::command(command, cli.timeout),
         Some(Command::Trust) => {
             let cwd: std::path::PathBuf = std::env::current_dir().map_err(storage::io_error)?;
             return trust::run(&storage::Paths::from_environment(), &cwd, cli.timeout);
-        }
-        Some(Command::Call(call)) => {
-            let _: call::Request = call.into_request()?;
         }
         _ => (),
     }
@@ -57,10 +51,4 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
         ErrorKind::Unsupported,
         "operation is not implemented yet",
     ))
-}
-
-#[derive(serde::Serialize)]
-struct ServersReport<'a> {
-    schema_version: u32,
-    servers: Vec<config::ServerReport<'a>>,
 }

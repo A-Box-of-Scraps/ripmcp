@@ -18,6 +18,8 @@ pub struct Cli {
 pub enum Command {
     #[command(name = "__supervisor", hide = true)]
     Supervisor,
+    #[command(name = "__guard", hide = true)]
+    Guard(Guard),
     Install(Install),
     Uninstall(Uninstall),
     Enable(Policy),
@@ -34,6 +36,26 @@ pub enum Command {
         #[command(subcommand)]
         command: Auth,
     },
+}
+
+#[derive(Args)]
+pub struct Guard {
+    pub lease: String,
+    pub parent: u32,
+    #[arg(long)]
+    pub runtime: PathBuf,
+    #[arg(long)]
+    pub state: PathBuf,
+    #[arg(long)]
+    pub installation: String,
+    #[arg(long)]
+    pub revision: String,
+    #[arg(long)]
+    pub container: Option<String>,
+    #[arg(long = "container-env")]
+    pub container_env: Vec<String>,
+    #[arg(last = true, required = true)]
+    pub command: Vec<std::ffi::OsString>,
 }
 
 #[derive(Args)]

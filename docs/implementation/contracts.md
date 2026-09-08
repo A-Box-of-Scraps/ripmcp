@@ -262,3 +262,74 @@ audit and test evidence are in `03-protocol-client.md`.
   translate IPC cancellation to individual operation tokens, not forward SIGINT
   to its shared MCP child. Async stream cancellation and process shutdown have
   separate lifetimes; process-group ownership remains phase 04 work.
+
+## Phase 04 supervisor integration contracts
+
+Completed September 8, 2026. The phase handoff contains the test matrix and exact
+validation commands. These choices implement D01/D07/D10 without adding product
+documentation or completing the installation, authentication or cleanup phases.
+
+- Local CLI start/stop and qualified tools/tool/call use `supervisor::Connection`.
+  Existing-only connection/status never starts the daemon. Lazy bootstrap uses
+  the authenticated private endpoint; protocol version 2 is not compatible with
+  the earlier control-only version 1. Unsafe or incompatible artifacts are
+  preserved rather than treated as permission to kill a recorded PID.
+- Daemon and instance lifetime locks live in private state storage, independently
+  of socket placement. Changing XDG_RUNTIME_DIR cannot start a second owner of the
+  same state. Instance keys bind canonical scope/name; reuse additionally requires
+  the same installation ID, source revision, resolved origin, runtime executable
+  metadata and effective child environment. Mutable ownership bookkeeping is not
+  a process revision and does not discard a successfully verified connection.
+- A prepared local `Origin::Local` requires matching runtime/request, a resolved
+  immutable package/image and an absolute `executable`. This additive optional
+  origin field preserves existing journal decoding; missing preparation fails
+  closed. Phase 06 must populate it and must not use start as a package resolver.
+- The supervisor independently reloads trust, enablement and tool policy, including
+  after both request-queue and ownership-lease waits. A final check separates tool
+  discovery from invocation. Stop uses only the previously owned scoped process;
+  it does not execute an edited command or dereference its new credentials.
+- One broker operation runs per scoped slot. Limits are 16 admitted operations per
+  slot, 256 slots, and 32 IPC connections. Each supervised MCP connection reserves
+  at most 16 unsettled request permits. Cancelled requests retain only bounded
+  admission until a response or transport closure, rather than allowing unlimited
+  orphan work. Subsequent calls can use remaining permits without killing or
+  replaying the cancelled call. All admission and IPC waits consume the original
+  monotonic operation budget. Initialization/control reads have a 60-second cap.
+- Operation task lifetime is independent of the CLI socket. Disconnect cancels
+  the operation, but a cancelled startup finishes owned teardown while retaining
+  its maintenance read guard. Shutdown cancels operations, drains the barrier and
+  stops managed children. Phase 08 must execute mutations under the exclusive
+  supervisor-owned barrier, not an expiring external lease.
+- Child guards monitor supervisor pidfds and retain unreaped group leaders until
+  group TERM/KILL completes. They inherit ownership leases into descendants and
+  reap adopted children. Runtime failure can restart on the next explicit use;
+  calls with uncertain delivery are never automatically replayed. A held stale
+  lease is not permission to signal a PID found on disk. Kernel pidfd support is
+  required and checked before bootstrap.
+- Docker ownership uses an immutable image, unique name/label and verified
+  container ID/name/label before removal. Private `.instance-<key>.failed` state
+  records are durable before launch and bind installation, runtime and effective
+  revision. Failed cleanup preserves the record and prevents an unsafe relaunch.
+  Phase 08 must reconcile these records, including resource/credential context,
+  before deleting installation data or declaring cleanup complete.
+- Child environment is a small caller base plus freshly authorized references;
+  it is not the supervisor's inherited credential snapshot. Guard runtime/state
+  paths are separate from child environment overrides. User cwd defaults to `/`,
+  project cwd to the canonical project root; explicit absolute cwd takes priority.
+- Server reports retain name/provenance/enablement/trust fields and add
+  `process_state` and `health`. Remote entries are `not_managed`/`unknown`.
+  Config-revision or age changes make observations stale; status and a reused
+  start do not refresh health. Unverified, unknown, stale and failed are distinct.
+  No idle shutdown, background probe, result cache or truncation was introduced.
+
+Primary OS/runtime references checked for the ownership implementation:
+
+- `https://man7.org/linux/man-pages/man2/pidfd_open.2.html`
+- `https://man7.org/linux/man-pages/man2/PR_SET_PDEATHSIG.2const.html`
+- `https://docs.docker.com/reference/cli/docker/container/ls/`
+- `https://docs.docker.com/reference/cli/docker/inspect/`
+
+The pidfd zombie-retention precondition is enforced with an installed SIGCHLD
+handler and no reaping before group signals. The pinned signal-hook-registry
+implementation replaces SIGCHLD flags without SA_NOCLDWAIT. Default validation
+uses fake runtime executables, not a real Docker daemon or package registry.

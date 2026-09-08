@@ -11,6 +11,9 @@ use std::path::{Component, Path};
 pub struct Directory(File);
 
 impl Directory {
+    pub(crate) fn sync(&self) -> Result<(), Error> {
+        self.0.sync_all().map_err(io_error)
+    }
     pub fn open(path: &Path, create: bool, private: bool) -> Result<Option<Self>, Error> {
         if !path.is_absolute() {
             return Err(invalid());

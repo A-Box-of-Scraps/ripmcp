@@ -3,7 +3,7 @@ use crate::error::Error;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
-use tokio::sync::{OwnedSemaphorePermit, mpsc, oneshot};
+use tokio::sync::{Notify, OwnedSemaphorePermit, mpsc, oneshot};
 
 pub(super) struct WriteMessage {
     pub bytes: Vec<u8>,
@@ -18,6 +18,7 @@ struct Entry {
 #[derive(Default)]
 struct State {
     pending: HashMap<String, Entry>,
+    abandoned: HashMap<String, OwnedSemaphorePermit>,
     closed: Option<Error>,
     last_id: u64,
 }
@@ -25,9 +26,28 @@ struct State {
 #[derive(Default)]
 pub(super) struct Registry {
     state: Mutex<State>,
+    settled: Notify,
 }
 
 impl Registry {
+    pub(super) fn has_abandoned(&self) -> bool {
+        !self.lock().abandoned.is_empty()
+    }
+
+    pub(super) async fn settle(&self) {
+        loop {
+            let notified: tokio::sync::futures::Notified<'_> = self.settled.notified();
+            tokio::pin!(notified);
+            notified.as_mut().enable();
+            if !self.has_abandoned() {
+                return;
+            }
+            notified.await;
+        }
+    }
+    pub(super) fn is_closed(&self) -> bool {
+        self.lock().closed.is_some()
+    }
     fn lock(&self) -> MutexGuard<'_, State> {
         self.state
             .lock()
@@ -65,6 +85,8 @@ impl Registry {
         let mut state: MutexGuard<'_, State> = self.lock();
         if let Some(entry) = state.pending.remove(&id) {
             let _: Result<(), Result<Value, Error>> = entry.sender.send(result);
+        } else if state.abandoned.remove(&id).is_some() {
+            self.settled.notify_waiters();
         } else if number(&id)? > state.last_id {
             return Err(protocol_error());
         }
@@ -79,6 +101,8 @@ impl Registry {
         for (_, entry) in state.pending.drain() {
             let _: Result<(), Result<Value, Error>> = entry.sender.send(Err(error.clone()));
         }
+        state.abandoned.clear();
+        self.settled.notify_waiters();
     }
 }
 
@@ -98,19 +122,22 @@ pub(super) struct PendingRequest {
 
 impl Drop for PendingRequest {
     fn drop(&mut self) {
-        let entry: Option<Entry> = self.registry.lock().pending.remove(&self.id);
+        let mut state: MutexGuard<'_, State> = self.registry.lock();
+        let entry: Option<Entry> = state.pending.remove(&self.id);
         if !self.submitted {
             return;
         }
         if let Some(entry) = entry {
+            state.abandoned.insert(self.id.clone(), entry.permit);
+            drop(state);
             let notification: Value = json!({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": self.id}});
             let bytes: Vec<u8> = serde_json::to_vec(&notification).unwrap_or_default();
-            // Keep the request slot until cancellation is written, bounding queued frames.
+            // Keep admission reserved until the abandoned request actually settles.
             if self
                 .writer
                 .try_send(WriteMessage {
                     bytes,
-                    permit: Some(entry.permit),
+                    permit: None,
                 })
                 .is_err()
             {

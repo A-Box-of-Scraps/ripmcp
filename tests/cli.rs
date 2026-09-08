@@ -27,7 +27,7 @@ fn six_call_forms() {
                 _ => args.extend(["--input", "-"]),
             }
             let output: Output = sandbox.run(&args[1..]);
-            assert_eq!(output.status.code(), Some(10));
+            assert_eq!(output.status.code(), Some(if qualified { 3 } else { 10 }));
             assert!(output.stdout.is_empty());
             let cli: Cli = Cli::try_parse_from(args).unwrap();
             let Some(Command::Call(call)): Option<Command> = cli.command else {
@@ -60,12 +60,7 @@ fn command_forms_have_explicit_unsupported_errors() {
         &["disable", "s", "t"],
         &["enable", "s", "t", "--project"],
         &["disable", "s", "--user"],
-        &["start", "s"],
-        &["stop", "s"],
         &["tools"],
-        &["tools", "s"],
-        &["tools", "s", "--all"],
-        &["tool", "s", "t"],
         &["shape", "-"],
         &["shape", "missing.json"],
         &["auth", "login", "s"],
@@ -80,6 +75,23 @@ fn command_forms_have_explicit_unsupported_errors() {
         assert_eq!(output.status.code(), Some(10), "{args:?}: {output:?}");
         assert!(output.stdout.is_empty());
         assert!(!output.stderr.is_empty());
+    }
+    assert_eq!(std::fs::read_dir(sandbox.root.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn local_commands_reject_missing_configuration_without_side_effects() {
+    let sandbox: Sandbox = Sandbox::new();
+    for args in [
+        &["start", "s"][..],
+        &["stop", "s"],
+        &["tools", "s"],
+        &["tools", "s", "--all"],
+        &["tool", "s", "t"],
+    ] {
+        let output: Output = sandbox.run(args);
+        assert_eq!(output.status.code(), Some(3));
+        assert!(output.stdout.is_empty());
     }
     assert_eq!(std::fs::read_dir(sandbox.root.path()).unwrap().count(), 0);
 }

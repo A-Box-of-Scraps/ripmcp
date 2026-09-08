@@ -22,6 +22,7 @@ use tempfile::TempDir;
 struct Fixture {
     root: TempDir,
     paths: Paths,
+    runtime: TempDir,
 }
 impl Fixture {
     fn new() -> Self {
@@ -31,7 +32,11 @@ impl Fixture {
             OsString::from("HOME"),
             root.path().as_os_str().to_owned(),
         )]));
-        Self { root, paths }
+        Self {
+            root,
+            paths,
+            runtime: tempfile::tempdir().unwrap(),
+        }
     }
     fn project(&self, relative: &str, config: &Value) -> PathBuf {
         let root: PathBuf = self.root.path().join(relative);
@@ -65,6 +70,7 @@ impl Fixture {
         Command::new(env!("CARGO_BIN_EXE_ripmcp"))
             .env_clear()
             .env("HOME", self.root.path())
+            .env("XDG_RUNTIME_DIR", self.runtime.path())
             .current_dir(cwd)
             .stdin(Stdio::null())
             .args(args)
