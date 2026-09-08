@@ -49,7 +49,7 @@ impl Default for Configuration {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Server {
     #[serde(default = "enabled")]
@@ -63,7 +63,7 @@ fn enabled() -> bool {
     true
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Definition {
     Local {
@@ -94,17 +94,17 @@ pub enum Runtime {
     Uvx,
     Docker,
 }
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Stdio {
     Stdio,
 }
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StreamableHttp {
     StreamableHttp,
 }
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Authentication {
     #[default]
@@ -112,7 +112,7 @@ pub enum Authentication {
     Oauth,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(try_from = "ReferenceWire", into = "ReferenceWire")]
 pub enum SecretReference {
     Environment(String),

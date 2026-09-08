@@ -408,3 +408,53 @@ transaction failure semantics, source references and validation evidence.
   recovery path is validated skip-verify registration, explicit auth login and
   discovery, with project reapproval and shadowing caveats. Secret values never
   enter installation reports or ownership snapshots.
+
+
+## Phase 07 tool-workflow integration contracts
+
+Completed September 8, 2026. See 07-tool-workflow.md for regression evidence.
+
+- Policy mutations use the selected scope and compare the target definition again
+  under its configuration lock. A retained disabled name is a known policy target
+  even after discovery drops it. Other tool targets require live discovery; disabled
+  servers cannot be temporarily enabled for validation. If a project shadows a user
+  target requiring discovery, run the mutation outside that project. No-op edits
+  preserve original bytes, avoiding accidental project-trust invalidation.
+- Tool lists use `{schema_version:1,tools:[...],errors:[...]}` with entries containing
+  `server`, `name`, `enabled`, and optional `description`/`title`. `--all` requires a
+  server and includes disabled tools, never disabled servers. Tool detail preserves
+  the full tool definition under `tool`. Partial discovery exits 8 after writing its
+  valid entries and safe error identities/codes. Empty complete discovery succeeds.
+- Shorthand performs uncached discovery of every configured enabled server, including
+  trust/auth failures as incomplete rather than treating those servers as empty.
+  The effective identity set must remain unchanged during discovery. Exactly one
+  enabled match permits dispatch; zero matches exit 2, collisions exit 2 with
+  `{schema_version:1,candidates:[{server,tool},...]}`, and incomplete discovery exits
+  8 with the discovery report. This is an observed discovery snapshot, not an atomic
+  lock on remote servers' future metadata. Qualified calls discover only their target.
+- Policy/trust checks at dispatch are authoritative; disabling during discovery
+  prevents a call. A request already transmitted may complete and returns its full
+  result even if disabled meanwhile. No cancellation, revocation, replay, result
+  cache, automatic save, or preview invocation is implied.
+- Arguments require exactly one strict JSON object. File/stdin input is bounded to
+  16 MiB, duplicate keys and nesting at depth 128 are rejected, and exact numbers
+  are retained. General JSON Schema validation remains server-side; HTTP transport
+  annotation types/values are validated by the existing protocol client. Parsing,
+  read, size, and header-validation errors occur before tool invocation and never
+  echo input. Input is read before shorthand discovery.
+- Shape accepts arbitrary JSON roots from a saved file or stdin. It has no config,
+  supervisor, trust, or credential dependency at runtime. Its report is
+  `{schema_version:1,shape:...,limits:...}`. Scalar nodes contain only `type`;
+  object nodes add `fields`, array nodes add exact `length` and ordered `items`
+  containing each inspected element's shape. It does not merge heterogeneous
+  elements or claim unseen elements have inspected types.
+- Shape input is limited to 64 MiB and the strict parser's nesting bound of 128.
+  Inspection defaults to depth 8 and width 100, with CLI maxima 64 and 10000.
+  Root depth is zero; a container at the selected depth retains type/array length
+  but omits children. A global 100000-node inspection budget also applies. Each
+  container reports `truncated`; omitted immediate fields/elements have an exact
+  `omitted` count. Input size/nesting rejection exits 2 with no shape output;
+  bounded successful inspection exits 0 and never modifies the saved result.
+- Shape uses the explicit timeout or a standalone 60-second default, not configured
+  settings. Streaming reads observe timeout/SIGINT. Synchronous parsing/regular-file
+  reads cannot be preempted; the deadline is checked before output.

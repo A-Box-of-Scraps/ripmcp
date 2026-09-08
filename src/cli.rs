@@ -121,7 +121,7 @@ pub struct Server {
 #[derive(Args)]
 pub struct Tools {
     pub server: Option<String>,
-    #[arg(long)]
+    #[arg(long, requires = "server")]
     pub all: bool,
 }
 

@@ -96,8 +96,11 @@ pub(crate) async fn execute(
     server.require_enabled(tool_name(action))?;
     let options: HttpOptions = options(&server, &cwd, operation).await?;
     let client: Client = Client::http(options, Limits::default(), operation).await?;
-    let result: Result<Value, Error> = invoke(&client, &server, action, operation).await;
+    let result: Result<Value, Error> = invoke(&client, &server, action, operation, &cwd).await;
     client.shutdown().await;
+    if !matches!(action, Action::Call { .. }) {
+        recheck(&paths, &cwd, server.identity())?;
+    }
     result
 }
 
@@ -191,17 +194,12 @@ async fn invoke(
     server: &AuthorizedServer<'_>,
     action: &Action,
     operation: &Operation,
+    cwd: &std::path::Path,
 ) -> Result<Value, Error> {
     match action {
         Action::Tools { all } => {
-            let mut discovery: Discovery = client.discover_tools(operation).await?;
-            discovery.require_complete()?;
-            if !all {
-                discovery
-                    .tools
-                    .retain(|tool| server.require_enabled(Some(tool.name())).is_ok());
-            }
-            Ok(json!({"schema_version": 1, "tools": discovery.tools}))
+            let discovery: Discovery = client.discover_tools(operation).await?;
+            Ok(crate::tools::report(discovery, server, *all))
         }
         Action::Tool { tool } => {
             let tool: Tool = client.tool(tool, operation).await?;
@@ -211,6 +209,15 @@ async fn invoke(
             let arguments: Value =
                 crate::json::parse(arguments.as_bytes()).map_err(|_| super::invalid())?;
             let tool: Tool = client.tool(tool, operation).await?;
+            let effective: Effective = Effective::load(&Paths::from_environment(), cwd)?;
+            let current: AuthorizedServer<'_> = effective.authorize(&server.identity().name)?;
+            current.require_enabled(Some(tool.name()))?;
+            if current.identity() != server.identity() {
+                return Err(Error::new(
+                    ErrorKind::Configuration,
+                    "configuration changed before invocation",
+                ));
+            }
             let result: ToolResult = client.call_tool(&tool, arguments, operation).await?;
             Ok(result.into_envelope())
         }

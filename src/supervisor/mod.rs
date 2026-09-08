@@ -3,7 +3,7 @@ mod client;
 mod command;
 mod endpoint;
 mod guardian;
-mod input;
+pub(crate) mod input;
 pub(crate) mod launch;
 mod manager;
 mod service;
@@ -38,3 +38,5 @@ fn incompatible() -> Error {
 }
 
 pub(crate) use command::installation_environment;
+
+pub(crate) use command::request;

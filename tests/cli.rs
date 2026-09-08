@@ -27,7 +27,13 @@ fn six_call_forms() {
                 _ => args.extend(["--input", "-"]),
             }
             let output: Output = sandbox.run(&args[1..]);
-            assert_eq!(output.status.code(), Some(if qualified { 3 } else { 10 }));
+            let expected = match source {
+                "file" => 1,
+                "stdin" => 2,
+                _ if qualified => 3,
+                _ => 2,
+            };
+            assert_eq!(output.status.code(), Some(expected));
             assert!(output.stdout.is_empty());
             let cli: Cli = Cli::try_parse_from(args).unwrap();
             let Some(Command::Call(call)): Option<Command> = cli.command else {
@@ -52,16 +58,8 @@ fn command_forms_have_explicit_unsupported_errors() {
         &["uninstall", "s"],
         &["uninstall", "s", "--clean"],
         &["uninstall", "s", "--clean", "-y"],
-        &["enable", "s"],
-        &["disable", "s", "t"],
-        &["enable", "s", "t", "--project"],
-        &["disable", "s", "--user"],
-        &["tools"],
-        &["shape", "-"],
-        &["shape", "missing.json"],
         &["--uninstall-everything", "-y"],
         &["--uninstall-everything"],
-        &["call", "t", "--input", "missing"],
     ];
     for args in forms {
         let output: Output = sandbox.run(args);
@@ -77,6 +75,10 @@ fn local_commands_reject_missing_configuration_without_side_effects() {
     let sandbox: Sandbox = Sandbox::new();
     for args in [
         &["start", "s"][..],
+        &["enable", "s"],
+        &["disable", "s", "t"],
+        &["enable", "s", "t", "--project"],
+        &["disable", "s", "--user"],
         &["auth", "login", "s"],
         &["auth", "status", "s"],
         &["auth", "logout", "s"],
@@ -109,6 +111,7 @@ fn invalid_arguments_have_no_side_effects_or_secret_echo() {
         &["start"],
         &["tool", "s"],
         &["servers", "secret"],
+        &["tools", "--all"],
         &["--uninstall-everything", "servers"],
         &["-y"],
         &["uninstall", "s", "-y"],

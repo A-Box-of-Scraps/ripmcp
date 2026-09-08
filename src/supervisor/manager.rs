@@ -25,7 +25,7 @@ pub struct LocalRequest {
     pub action: Action,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Action {
     Install(Box<crate::install::Request>),

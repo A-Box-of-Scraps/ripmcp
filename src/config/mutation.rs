@@ -92,8 +92,14 @@ impl Effective {
                 .map(Configuration::parse)
                 .transpose()?
                 .unwrap_or_default();
+            let before: Vec<u8> = serde_json::to_vec(&config).map_err(crate::storage::io_error)?;
             let result: R = change(&mut config)?;
             config.validate()?;
+            if before == serde_json::to_vec(&config).map_err(crate::storage::io_error)?
+                && let Some(bytes) = bytes
+            {
+                return Ok((bytes.to_vec(), (result, false)));
+            }
             let output: Vec<u8> =
                 serde_json::to_vec_pretty(&config).map_err(crate::storage::io_error)?;
             let changed = bytes != Some(output.as_slice());

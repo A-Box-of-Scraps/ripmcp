@@ -66,10 +66,21 @@ for line in sys.stdin:
             time.sleep(1000)
         reply(request, {"resultType": "complete", "supportedVersions": ["2026-07-28"], "capabilities": {"tools": {}}})
     elif method == "tools/list":
-        reply(request, {"resultType": "complete", "tools": [{"name": "echo", "inputSchema": {"type": "object"}}]})
+        if os.path.exists(root + "/discovery-wait"):
+            open(root + "/discovering", "w").close()
+            while os.path.exists(root + "/discovery-wait"):
+                time.sleep(0.01)
+        tools = [{"name": "echo", "inputSchema": {"type": "object"}}]
+        if os.path.exists(root + "/tools.json"):
+            with open(root + "/tools.json") as source:
+                tools = json.load(source)
+        reply(request, {"resultType": "complete", "tools": tools})
     elif method == "tools/call":
         with open(root + "/calls", "a") as out:
             out.write(str(os.getpid()) + "\n")
+        if request["params"]["arguments"].get("wait_file"):
+            while not os.path.exists(root + "/release"):
+                time.sleep(0.01)
         if mode == "crash_call":
             os._exit(19)
         if request["params"]["arguments"].get("stall"):

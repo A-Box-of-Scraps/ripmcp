@@ -80,16 +80,11 @@ impl Manager {
     ) -> Result<Value, Error> {
         match &request.action {
             Action::Tools { all } => {
-                let mut discovery: Discovery = client.discover_tools(operation).await?;
+                let discovery: Discovery = client.discover_tools(operation).await?;
                 self.recheck(request, revision, operation).await?;
                 let effective: Effective = self.effective(request)?;
                 let server: AuthorizedServer<'_> = effective.authorize(&request.server)?;
-                if !all {
-                    discovery
-                        .tools
-                        .retain(|tool| server.require_enabled(Some(tool.name())).is_ok());
-                }
-                Ok(json!({"schema_version": 1, "tools": discovery.tools}))
+                Ok(crate::tools::report(discovery, &server, *all))
             }
             Action::Tool { tool } => {
                 let tool: Tool = client.tool(tool, operation).await?;

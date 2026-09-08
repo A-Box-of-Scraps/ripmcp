@@ -198,3 +198,34 @@ fn keyring_header_references_require_secure_storage_without_oauth() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("Secret Service"));
     assert!(output.stdout.is_empty());
 }
+
+#[test]
+fn partial_remote_discovery_preserves_valid_tools_but_cannot_resolve() {
+    for args in [&["tools", "s"][..], &["tools"], &["call", "echo", "{}"]] {
+        let server: Http = Http::new(vec![
+            handshake(),
+            reply(
+                2,
+                json!({"resultType":"complete", "tools":[
+                    {"name":"echo", "inputSchema":{"type":"object"}},
+                    {"name":"bad", "inputSchema":{"type":"object", "properties":{"token":{"type":"string", "x-mcp-header":""}}}}
+                ]}),
+            ),
+        ]);
+        let sandbox: Sandbox = Sandbox::new();
+        configure(
+            &sandbox,
+            remote(&format!("http://{}/mcp", server.address), "none"),
+        );
+        let output: Output = sandbox.run(args);
+        assert_eq!(output.status.code(), Some(8), "{output:?}");
+        let value: Value = ripmcp::json::parse(&output.stdout).unwrap();
+        assert_eq!(
+            value["tools"],
+            json!([{"server":"s", "name":"echo", "enabled":true}])
+        );
+        assert_eq!(value["errors"][0]["tool"], "bad");
+        assert_eq!(server.requests.try_iter().count(), 2);
+        server.finish().unwrap();
+    }
+}

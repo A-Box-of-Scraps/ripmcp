@@ -9,8 +9,10 @@ pub mod json;
 pub mod mcp;
 pub mod output;
 pub mod ownership;
+pub mod shape;
 pub mod storage;
 pub mod supervisor;
+pub mod tools;
 pub mod trust;
 
 use cli::{Cli, Command};
@@ -33,6 +35,7 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::Unsupported, "v1 supports Linux only"));
     }
     match cli.command {
+        Some(Command::Shape(shape)) => return shape::run(shape, cli.timeout),
         Some(Command::Install(install)) => return install::run(install, cli.timeout),
         Some(Command::Auth { command }) => return auth::run(command, cli.timeout),
         Some(Command::Supervisor) => return supervisor::run(),
@@ -41,6 +44,8 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
             command @ (Command::Servers
             | Command::Start(_)
             | Command::Stop(_)
+            | Command::Enable(_)
+            | Command::Disable(_)
             | Command::Tools(_)
             | Command::Tool(_)
             | Command::Call(_)),

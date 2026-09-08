@@ -22,7 +22,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Request {
     pub server: crate::config::Server,
