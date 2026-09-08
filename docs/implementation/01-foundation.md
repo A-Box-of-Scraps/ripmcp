@@ -1,6 +1,6 @@
 # 01: Contracts, CLI foundation and test infrastructure - 2026-09-08
 
-Status: **Blocked** (foundation implemented; authoritative command list and remaining contracts needed)
+Status: **Done**
 
 Dependencies: None.
 
@@ -25,12 +25,12 @@ inspect existing work before creating or modifying them.
 
 ## Implementation steps
 
-1. [ ] Resolve or explicitly block the decision register. Preserve the user's command surface; approve additional install/scope/timeout syntax. Record choices in the tracker before coding affected behavior.
-2. [ ] Select minimal Rust dependencies against the approved profile. Verify protocol-library support from official sources at implementation time; do not select a library based only on its latest release label. Keep protocol and process abstractions testable independently.
-3. [ ] Replace the entry-point stub with parser/dispatcher modules and typed command requests for every listed command. Validate mutually exclusive flags, server/tool arity, `--input`, `-y`, and self-uninstall conflicts without side effects. Unsupported handlers must return explicit errors, never success stubs.
+1. [x] Resolve or explicitly block the decision register. Preserve the user's command surface; approve additional install/scope/timeout syntax. Record choices in the tracker before coding affected behavior.
+2. [x] Select minimal Rust dependencies against the approved profile. Verify protocol-library support from official sources at implementation time; do not select a library based only on its latest release label. Keep protocol and process abstractions testable independently.
+3. [x] Replace the entry-point stub with parser/dispatcher modules and typed command requests for every listed command. Validate mutually exclusive flags, server/tool arity, `--input`, `-y`, and self-uninstall conflicts without side effects. Unsupported handlers must return explicit errors, never success stubs.
 4. [x] Define exact parsing rules for qualified and unqualified call forms, including inline JSON and `--input`. Parse positionals without guessing based on tool discovery. Reject missing, duplicate, malformed, or unexpected arguments consistently.
-5. [ ] Implement typed errors, stable exit codes, structured stdout writers, and stderr-only diagnostics/prompts. Define connection/protocol/auth/tool-result/partial-failure distinctions, timeout behavior and secret redaction.
-6. [ ] Build isolated test utilities: CLI process runner, temporary HOME/XDG environment, fake runtime commands, stdio MCP server, local HTTP/OAuth fixtures, and fault injection. Add parser/output tests now; implement protocol-specific fixture behavior in phase 03.
+5. [x] Implement typed errors, stable exit codes, structured stdout writers, and stderr-only diagnostics/prompts. Define connection/protocol/auth/tool-result/partial-failure distinctions, timeout behavior and secret redaction.
+6. [x] Build isolated test utilities: CLI process runner, temporary HOME/XDG environment, fake runtime commands, stdio MCP server, local HTTP/OAuth fixtures, and fault injection. Add parser/output tests now; implement protocol-specific fixture behavior in phase 03.
 
 ## Acceptance criteria
 
@@ -41,59 +41,57 @@ inspect existing work before creating or modifying them.
 
 ## References
 
-All idea files; user command list; AGENTS.md; Cargo.toml; src/main.rs.
+All idea files; commands.md; contracts.md; AGENTS.md; Cargo.toml; src/main.rs.
 
 Idea filenames refer to `../ideas/`. The user's latest command list takes
 precedence over tentative spellings in those notes.
 
 ## Handoff (update whenever work stops)
 
-- Completed: approved D01-D10; typed CLI for recoverable command forms; all six
-  call forms; side-effect-free argument validation; stable error kinds/codes;
-  JSON output writer; redacted stderr diagnostics; isolated HOME/XDG CLI runner.
-- Partial tasks: 01-03 and 05-06. Timeout execution/cancellation, fake runtimes,
-  stdio and HTTP/OAuth fixture scaffolding, and remaining contracts are not done.
-  All operational handlers explicitly fail with exit 10; none claim success.
-- Changed paths: Cargo.toml, Cargo.lock, src/{main,lib,cli,call,error,output}.rs,
-  tests/cli.rs, tests/support/mod.rs, and both phase tracker files. No commits.
-- Validation: `cargo fmt -q`, `cargo clippy -q --all-targets -- -D warnings`,
-  `cargo test -q`, `cargo dylint --all -- --locked --all-targets`, and
-  `(cd lints/explicit-local-types && cargo fmt -q && cargo test -q --locked)`
-  all passed. Application suite: six tests with command/input case matrices.
-  Lint suite: one harness test covering two UI cases. Initial parser conflict
-  and explicit-local-type failures were fixed, then the full gate rerun.
-- Decisions approved: D01-D10, preserving their technical verification gates.
-- Blockers: authoritative user command list unavailable; remaining additional
-  choices below need settlement. Protocol SDK coverage is not yet verified.
-- Next action: obtain the authoritative command list (especially trust and
-  self-uninstall spellings), settle remaining contracts, complete fixture
-  scaffolding and coverage, then rerun the gate before starting phase 02.
+- Completed: all six foundation tasks. The authoritative user command list is
+  saved in `commands.md`; the parser includes `trust` and every listed form.
+  D01-D10 approval and additional engineering contracts are recorded. No command
+  list or foundation contract questions remain.
+- Implemented: typed CLI requests; side-effect-free call grammar and conflict
+  validation; stable error codes; complete JSON/tool-result output with failure
+  status; strict timeout config/defaults and monotonic deadline primitive;
+  isolated CLI runner, fake runtime/stdio scripts, loopback HTTP/OAuth transport
+  scaffold and malformed/closure/stall fault injection.
+- Coverage: all six call forms through parsing and the CLI process; all listed
+  commands; trust/scope/self-uninstall conflicts; stdout/stderr separation;
+  no parser filesystem effects or secret echoes; timeout precedence/config
+  validation/overflow safety; tool-result preservation; fixture cleanup/failures.
+- Changed paths in this completion: `src/{cli,lib,deadline,output}.rs`,
+  `tests/{cli,contracts,fixtures}.rs`, `tests/support/fixtures/{http,process}.rs`,
+  and `docs/implementation/{index,01-foundation,commands,contracts}.md`.
+  No README, lint implementation or dependency changes. No commits made.
+- Final validation on September 8, 2026: all five required commands passed:
+  `cargo fmt -q`; `cargo clippy -q --all-targets -- -D warnings`;
+  `cargo test -q`; `cargo dylint --all -- --locked --all-targets`;
+  `(cd lints/explicit-local-types && cargo fmt -q && cargo test -q --locked)`.
+  Application tests: 18 (six CLI, six contract, six fixture tests, with case
+  matrices). Lint tests: one harness test with two passing UI cases. No
+  environmental limitations. `git diff --check` also passed.
+- Fixed during validation: root-level timeout/subcommand conflict and one missing
+  explicit array type in the HTTP fixture. Full gate passed after both fixes.
+- Deliberate boundaries: operational handlers, including trust and shape, return
+  explicit unsupported errors until their phases. Fixture scaffolding is not
+  protocol compatibility evidence. Phase 03 adds full protocol behavior,
+  asynchronous deadline enforcement and signal cancellation; phase 05 adds OAuth
+  validation and secure storage. No protocol library was selected prematurely.
+- Downstream gates: D05 concrete SDK revision/transport audit, D08 authorization
+  and secure-store audit, D10 runtime-directory/socket security tests. Official
+  source inspection and observed SDK default-version gap are in `contracts.md`.
+  These gates block affected integrations, not independent configuration work.
+- Next executable task: phase 02 step 1, implement lazy XDG path resolution and
+  security tests against the recorded contracts. Do not start phase 03 protocol
+  integration until its dependencies and compatibility audit are complete.
 
-## Foundation contracts recorded before implementation
+## Contract references
 
-- D01-D10 are user-approved. The original authoritative command-list message is
-  not present in this session or the tracker. Implement the forms recoverable
-  from the idea files; exact command-surface acceptance remains blocked pending
-  that list, especially trust and self-uninstall spellings.
-- Call grammar: without `--input`, exactly `tool JSON` or `server tool JSON`;
-  with `--input`, exactly `tool` or `server tool`. JSON must be an object.
-  File/stdin input is not read during parsing. No discovery-based parsing.
-- Foundation defaults: global `--timeout <seconds>` is a positive integer,
-  default 60; login timeout is 300 seconds unless explicitly overridden.
-  Cancellation is exit 130; timed-out work is exit 9; never retry calls implicitly.
-- Exit codes: 0 success, 1 internal/I/O, 2 usage/input, 3 configuration/trust,
-  4 connection, 5 protocol, 6 authentication, 7 tool-result failure,
-  8 partial failure, 9 timeout, 10 unsupported, 130 cancellation.
-- JSON writers append one newline and preserve envelopes; diagnostics never
-  include raw arguments, JSON values, credentials, URLs, or underlying errors.
-- Shape parser defaults: depth 8 (maximum 64), width 100 (maximum 10000).
-  Shape execution and truncation indicators belong to phase 07.
-- Remaining implementation choices (not silently approved): timeout config
-  schema, runtime version resolution, verification retention, remote session
-  ownership, credential-reference format, and untrusted diagnostic reads.
-- Dependencies are clap derive, serde, serde_json, and test-only tempfile.
-  Official specification at `https://modelcontextprotocol.io/specification/2026-07-28`
-  was accessible on September 8, 2026. Official Rust SDK at
-  `https://github.com/modelcontextprotocol/rust-sdk` was inspected, but compatible
-  revision/authorization coverage is not established. No protocol dependency is
-  selected; D05 remains a phase 03 verification gate, not a revision substitution.
+- `commands.md`: confirmed command surface and exact install/scope/input syntax.
+- `contracts.md`: timeout schema and precedence, exit codes/output/redaction,
+  shape bounds, pinned runtime resolution, verification retention, remote client
+  ownership, credential-reference syntax, passive untrusted reads, trust prompts,
+  official-source inspection and fixture limits.
+- `index.md`: user-approved D01-D10, architecture and overall phase status.

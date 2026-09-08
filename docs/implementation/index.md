@@ -7,12 +7,12 @@ servers, remote connections, OAuth, trusted project configuration, safe cleanup,
 and shell-friendly tool invocation. This directory is the implementation tracker
 for the user and subsequent agents, not product documentation.
 
-Baseline inspected on 2026-09-08: `src/main.rs` prints `Hello, world!`;
-`Cargo.toml` has no dependencies. Repository lint infrastructure exists, but no
-feature implementation or feature tests exist. Phase 01 has a tested foundation but is blocked on contract completion; later phases are not started.
-Creating this plan does not complete any implementation task.
+The original baseline was an entry-point stub with no application dependencies.
+Phase 01 is complete with typed CLI requests, errors/output contracts and
+isolated fixtures. Operational handlers still explicitly return unsupported;
+later phases are not started. See the phase handoff for validation evidence.
 
-The user's command list overrides earlier tentative command spellings in
+The user's [confirmed command list](commands.md) overrides tentative spellings in
 `docs/ideas/`. Agreed requirements in those notes remain requirements. Proposed
 technical choices below are not silently promoted to user-approved decisions.
 
@@ -20,7 +20,7 @@ technical choices below are not silently promoted to user-approved decisions.
 
 | Phase | Grouped work | Dependencies | Status |
 | --- | --- | --- | --- |
-| [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Blocked: command list and remaining contracts |
+| [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Done |
 | [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Not started |
 | [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Not started |
 | [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Not started |
@@ -132,12 +132,11 @@ choices into executable contracts/tests. Stop only affected work when blocked.
 | D09 | Clean uninstall deletes only exclusively owned tracked resources, confirms before all mutations, and retains retry records on failures. Self-uninstall includes exclusively owned data without a second cleanup flag, preserves project configs, and reports manual package-manager removal when necessary. Unknown binary ownership means preserve and report incomplete removal. | 08 |
 | D10 | When `XDG_RUNTIME_DIR` is missing/invalid, use an explicitly validated per-user private fallback under the system temporary directory. Refuse symlinks, foreign ownership and unsafe permissions; never accept an arbitrary existing socket. Exact fallback and locking behavior require security tests before approval. | 02, 04 |
 
-Additional implementation choices to settle in phase 01: timeout defaults and
-configuration syntax; stable exit-code assignments; shape depth/width limits;
-version pinning/resolution for delegated runtime packages; install verification
-process retention; remote request/session ownership; credential-reference format;
-and whether diagnostic-only configuration reads may expose untrusted definitions.
-These must be recorded, not left for different agents to guess differently.
+Additional engineering choices are recorded in [foundation contracts](contracts.md):
+timeout config/defaults, exit codes, shape bounds, delegated version resolution,
+verification process retention, remote ownership, secret references and untrusted
+reads. D05/D08 library audits and D10 security tests remain explicit downstream
+integration gates; they do not block independent phase 02 configuration work.
 
 ## Validation gate for every implementation phase
 
@@ -159,8 +158,8 @@ Missing tools or network access are recorded as validation limitations, not pass
 
 ## Source map
 
-- User's command list in this conversation: authoritative public command surface,
-  including shorthand calls and self-uninstall spellings.
+- `commands.md`: authoritative user command list, plus approved install/scope syntax.
+- `contracts.md`: implementation choices and protocol/security verification gates.
 - `docs/ideas/index.md`: clarified requirements and lifecycle agreements.
 - `docs/ideas/v1-scope.md`: protocol target, essentials and deferrals.
 - `docs/ideas/configuration.md`: agreed Linux paths, override and trust requirements.
@@ -168,7 +167,7 @@ Missing tools or network access are recorded as validation limitations, not pass
 - `docs/ideas/authentication.md`: OAuth, blocking login and credential binding.
 - `docs/ideas/tool-workflow.md`: unique-name resolution and offline shape workflow.
 - `docs/ideas/self-uninstall.md`: executable removal and preservation constraints.
-- `src/main.rs`, `Cargo.toml`: unimplemented application baseline.
+- `src/`, `tests/`, `Cargo.toml`: CLI foundation, contracts and isolated fixtures.
 - `AGENTS.md`, `.cargo/config.toml`, `clippy.toml`,
   `lints/explicit-local-types/Cargo.toml`: coding and validation constraints.
 

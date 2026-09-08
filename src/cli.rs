@@ -2,11 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(
-    version,
-    about = "Manage and invoke MCP servers",
-    args_conflicts_with_subcommands = true
-)]
+#[command(version, about = "Manage and invoke MCP servers")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -27,6 +23,7 @@ pub enum Command {
     Start(Server),
     Stop(Server),
     Servers,
+    Trust,
     Tools(Tools),
     Tool(Tool),
     Call(Call),
@@ -130,4 +127,20 @@ pub enum Auth {
     Login(Server),
     Status(Server),
     Logout(Server),
+}
+
+impl Cli {
+    pub fn timeout_duration(&self) -> std::time::Duration {
+        self.timeout_with(&crate::deadline::Timeouts::default())
+    }
+
+    pub fn timeout_with(&self, timeouts: &crate::deadline::Timeouts) -> std::time::Duration {
+        let default_seconds = match &self.command {
+            Some(Command::Auth {
+                command: Auth::Login(_),
+            }) => timeouts.login_seconds.get(),
+            _ => timeouts.operation_seconds.get(),
+        };
+        std::time::Duration::from_secs(self.timeout.unwrap_or(default_seconds))
+    }
 }

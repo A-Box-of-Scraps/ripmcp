@@ -13,6 +13,7 @@ fn parser_is_consistent() {
 
 #[test]
 fn six_call_forms() {
+    let sandbox: Sandbox = Sandbox::new();
     for qualified in [false, true] {
         for source in ["inline", "file", "stdin"] {
             let mut args: Vec<&str> = vec!["ripmcp", "call"];
@@ -25,6 +26,9 @@ fn six_call_forms() {
                 "file" => args.extend(["--input", "arguments.json"]),
                 _ => args.extend(["--input", "-"]),
             }
+            let output: Output = sandbox.run(&args[1..]);
+            assert_eq!(output.status.code(), Some(10));
+            assert!(output.stdout.is_empty());
             let cli: Cli = Cli::try_parse_from(args).unwrap();
             let Some(Command::Call(call)): Option<Command> = cli.command else {
                 panic!("expected call")
@@ -38,6 +42,7 @@ fn six_call_forms() {
             ));
         }
     }
+    assert_eq!(std::fs::read_dir(sandbox.root.path()).unwrap().count(), 0);
 }
 
 #[test]
@@ -49,6 +54,7 @@ fn command_forms_have_explicit_unsupported_errors() {
         &["install", "s", "--docker", "image", "--skip-verify"],
         &["install", "s", "--config", "missing.json", "--user"],
         &["uninstall", "s"],
+        &["uninstall", "s", "--clean"],
         &["uninstall", "s", "--clean", "-y"],
         &["enable", "s"],
         &["disable", "s", "t"],
@@ -57,14 +63,18 @@ fn command_forms_have_explicit_unsupported_errors() {
         &["start", "s"],
         &["stop", "s"],
         &["servers"],
+        &["trust"],
         &["tools"],
+        &["tools", "s"],
         &["tools", "s", "--all"],
         &["tool", "s", "t"],
         &["shape", "-"],
+        &["shape", "missing.json"],
         &["auth", "login", "s"],
         &["auth", "status", "s"],
         &["auth", "logout", "s"],
         &["--uninstall-everything", "-y"],
+        &["--uninstall-everything"],
         &["call", "t", "--input", "missing"],
     ];
     for args in forms {
@@ -99,6 +109,12 @@ fn invalid_arguments_have_no_side_effects_or_secret_echo() {
         &["shape", "-", "--depth", "0"],
         &["--timeout", "0", "servers"],
         &["--secret"],
+        &["trust", "secret"],
+        &["trust", "-y"],
+        &["trust", "--user"],
+        &["trust", "--project"],
+        &["--uninstall-everything", "--clean"],
+        &["--uninstall-everything", "--include-projects"],
     ];
     for args in forms {
         let output: Output = sandbox.run(args);

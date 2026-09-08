@@ -1,5 +1,6 @@
 pub mod call;
 pub mod cli;
+pub mod deadline;
 pub mod error;
 pub mod output;
 
@@ -7,6 +8,12 @@ use cli::{Cli, Command};
 use error::{Error, ErrorKind};
 
 pub fn dispatch(cli: Cli) -> Result<(), Error> {
+    if cli.uninstall_everything && cli.command.is_some() {
+        return Err(Error::new(
+            ErrorKind::Usage,
+            "self-uninstall cannot be combined with a command",
+        ));
+    }
     if cli.command.is_none() && !cli.uninstall_everything {
         return Err(Error::new(
             ErrorKind::Usage,
