@@ -32,20 +32,20 @@ below are not approvals of an unverified implementation.
 
 ## Exit codes and output
 
-| Code | Meaning |
-| --- | --- |
-| 0 | Success (also help/version) |
-| 1 | Internal or I/O failure, including stdout write failure |
-| 2 | Invalid CLI or tool input |
-| 3 | Configuration, policy or project trust failure |
-| 4 | Connection/transport failure |
-| 5 | Protocol violation, negotiation or protocol error response |
-| 6 | Authentication required or authentication failure |
-| 7 | Tool-reported failure (`isError: true`) |
-| 8 | Partial discovery or incomplete requested cleanup |
-| 9 | Deadline exceeded |
-| 10 | Unsupported platform/capability or unimplemented handler |
-| 130 | Cancelled by user |
+| Code | Meaning                                                    |
+| ---- | ---------------------------------------------------------- |
+| 0    | Success (also help/version)                                |
+| 1    | Internal or I/O failure, including stdout write failure    |
+| 2    | Invalid CLI or tool input                                  |
+| 3    | Configuration, policy or project trust failure             |
+| 4    | Connection/transport failure                               |
+| 5    | Protocol violation, negotiation or protocol error response |
+| 6    | Authentication required or authentication failure          |
+| 7    | Tool-reported failure (`isError: true`)                    |
+| 8    | Partial discovery or incomplete requested cleanup          |
+| 9    | Deadline exceeded                                          |
+| 10   | Unsupported platform/capability or unimplemented handler   |
+| 130  | Cancelled by user                                          |
 
 - Every data response is a single complete JSON value plus newline on stdout.
   Tool calls preserve the entire MCP result envelope, including extensions, and
@@ -158,7 +158,6 @@ stale-socket handling before using this directory for supervisor communication.
   fixture transport and fault plumbing, not a compliant MCP or OAuth implementation.
   Full handshake, pagination, registration, callback validation and cancellation
   scenarios belong to phases 03 and 05 after the protocol audit.
-
 
 ## Phase 02 concrete configuration and storage contracts
 
@@ -334,7 +333,6 @@ handler and no reaping before group signals. The pinned signal-hook-registry
 implementation replaces SIGCHLD flags without SA_NOCLDWAIT. Default validation
 uses fake runtime executables, not a real Docker daemon or package registry.
 
-
 ## Phase 05 authentication integration contracts
 
 Completed September 8, 2026. The exact authorization profile, library audit,
@@ -374,7 +372,6 @@ provider limitations and test matrix are in `05-authentication.md`.
   treat an auth nickname, opaque keyring ID, saved status or stale config snapshot
   as permission to transmit credentials.
 
-
 ## Phase 06 installation integration contracts
 
 Completed September 8, 2026. See `06-installation.md` for runtime resolution,
@@ -408,7 +405,6 @@ transaction failure semantics, source references and validation evidence.
   recovery path is validated skip-verify registration, explicit auth login and
   discovery, with project reapproval and shadowing caveats. Secret values never
   enter installation reports or ownership snapshots.
-
 
 ## Phase 07 tool-workflow integration contracts
 

@@ -10,18 +10,34 @@ with open(root + "/pid", "w") as handle:
 
 
 def response(request, result):
-    raw = (json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}) + "\n").encode()
+    raw = (
+        json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}) + "\n"
+    ).encode()
     size = 3 if mode == "fragmented" else len(raw)
     for offset in range(0, len(raw), size):
-        os.write(1, raw[offset:offset + size])
+        os.write(1, raw[offset : offset + size])
 
 
 def error(request):
-    print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32603, "message": "secret-upstream-error"}}), flush=True)
+    print(
+        json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": request["id"],
+                "error": {"code": -32603, "message": "secret-upstream-error"},
+            }
+        ),
+        flush=True,
+    )
 
 
 def tool(name):
-    return {"name": name, "description": "fixture", "inputSchema": {"type": "object"}, "vendor": {"retained": True}}
+    return {
+        "name": name,
+        "description": "fixture",
+        "inputSchema": {"type": "object"},
+        "vendor": {"retained": True},
+    }
 
 
 def result(request):
@@ -32,7 +48,10 @@ def result(request):
             {"type": "image", "data": "AQI=", "mimeType": "image/png"},
             {"type": "audio", "data": "AwQ=", "mimeType": "audio/wav"},
             {"type": "resource_link", "name": "link", "uri": "fixture:///link"},
-            {"type": "resource", "resource": {"uri": "fixture:///data", "blob": "BQY="}},
+            {
+                "type": "resource",
+                "resource": {"uri": "fixture:///data", "blob": "BQY="},
+            },
         ],
         "structuredContent": request["params"].get("arguments", {}),
         "isError": mode == "tool_error",
@@ -61,8 +80,13 @@ for line in sys.stdin:
             response(old, result(old))
         pending = []
         continue
-    assert request["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] == "2026-07-28"
-    assert request["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"] == {}
+    assert (
+        request["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"]
+        == "2026-07-28"
+    )
+    assert (
+        request["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"] == {}
+    )
     if method == "server/discover":
         if mode == "stall_init":
             time.sleep(10)
@@ -79,11 +103,31 @@ for line in sys.stdin:
             os.write(1, b'{"jsonrpc":"2.0"}')
             sys.exit(0)
         if mode == "server_request":
-            print(json.dumps({"jsonrpc": "2.0", "id": "server-1", "method": "sampling/createMessage", "params": {}}), flush=True)
+            print(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": "server-1",
+                        "method": "sampling/createMessage",
+                        "params": {},
+                    }
+                ),
+                flush=True,
+            )
             continue
         if mode == "wrong_id":
             request["id"] = "ripmcp-99999"
-        response(request, {"resultType": "complete", "supportedVersions": ["2025-11-25" if mode == "version" else "2026-07-28"], "capabilities": {} if mode == "no_tools" else {"tools": {}}, "vendor": "retained"})
+        response(
+            request,
+            {
+                "resultType": "complete",
+                "supportedVersions": [
+                    "2025-11-25" if mode == "version" else "2026-07-28"
+                ],
+                "capabilities": {} if mode == "no_tools" else {"tools": {}},
+                "vendor": "retained",
+            },
+        )
     elif method == "tools/list":
         cursor = request["params"].get("cursor")
         if mode == "slow_discovery":
@@ -91,8 +135,13 @@ for line in sys.stdin:
         if mode == "list_failure" and cursor:
             error(request)
             continue
-        page = {"resultType": "complete", "tools": [tool("echo2" if cursor else "echo")]}
-        if mode == "cycle" or (not cursor and mode not in ["concurrent", "cancel", "drop_call"]):
+        page = {
+            "resultType": "complete",
+            "tools": [tool("echo2" if cursor else "echo")],
+        }
+        if mode == "cycle" or (
+            not cursor and mode not in ["concurrent", "cancel", "drop_call"]
+        ):
             page["nextCursor"] = "page2"
         response(request, page)
     elif method == "tools/call":
@@ -112,7 +161,14 @@ for line in sys.stdin:
                 pending = []
             continue
         if mode == "input_required":
-            response(request, {"resultType": "input_required", "inputRequests": [], "requestState": "private"})
+            response(
+                request,
+                {
+                    "resultType": "input_required",
+                    "inputRequests": [],
+                    "requestState": "private",
+                },
+            )
         elif mode == "protocol_error":
             error(request)
         else:

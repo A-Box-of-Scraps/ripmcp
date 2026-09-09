@@ -28,17 +28,17 @@ technical choices below are not silently promoted to user-approved decisions.
 
 ## Phase tracker
 
-| Phase | Grouped work | Dependencies | Status |
-| --- | --- | --- | --- |
-| [01](01-foundation.md) | Resolve contracts, CLI, errors, test infrastructure | None | Done |
-| [02](02-configuration-trust.md) | Storage, configuration, scope, trust, ownership records | 01 | Done |
-| [03](03-protocol-client.md) | MCP client, transports, discovery, cancellation | 01, 02 | Done |
-| [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status | 02, 03 | Done |
-| [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Done |
-| [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Done |
-| [07](07-tool-workflow.md) | Tool policy, discovery, qualified/shorthand calls, shape | 03, 04, 05, 06 | Done |
-| [08](08-cleanup.md) | Uninstall, clean uninstall, self-removal and recovery | 02, 04, 06, 07 | Done |
-| [09](09-v1-validation.md) | Full-system regression, failure recovery and v1 readiness | All previous phases | Blocked |
+| Phase                            | Grouped work                                                   | Dependencies        | Status  |
+| -------------------------------- | -------------------------------------------------------------- | ------------------- | ------- |
+| [01](01-foundation.md)           | Resolve contracts, CLI, errors, test infrastructure            | None                | Done    |
+| [02](02-configuration-trust.md)  | Storage, configuration, scope, trust, ownership records        | 01                  | Done    |
+| [03](03-protocol-client.md)      | MCP client, transports, discovery, cancellation                | 01, 02              | Done    |
+| [04](04-supervisor-lifecycle.md) | Persistent local processes, supervisor, lifecycle and status   | 02, 03              | Done    |
+| [05](05-authentication.md)       | Remote OAuth and secure credential lifecycle                   | 02, 03              | Done    |
+| [06](06-installation.md)         | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05      | Done    |
+| [07](07-tool-workflow.md)        | Tool policy, discovery, qualified/shorthand calls, shape       | 03, 04, 05, 06      | Done    |
+| [08](08-cleanup.md)              | Uninstall, clean uninstall, self-removal and recovery          | 02, 04, 06, 07      | Done    |
+| [09](09-v1-validation.md)        | Full-system regression, failure recovery and v1 readiness      | All previous phases | Blocked |
 
 Default execution order is numeric. Phase 05 can run alongside 04 after 03.
 Do not start a dependent integration until its prerequisite contracts are stable.
@@ -129,18 +129,18 @@ D01-D10 are **approved** by the user on September 8, 2026. Approval preserves
 the technical verification gates in D05, D08, and D10. Phase 01 converts these
 choices into executable contracts/tests. Stop only affected work when blocked.
 
-| ID (approved) | Approved decision | Blocks |
-| --- | --- | --- |
-| D01 | Linux-only v1; fail clearly on unsupported systems. One per-user supervisor with isolated scoped server identities. | 02, 04, 08 |
-| D02 | Native versioned JSON config. Nearest ancestor `.ripmcp/config.json`, search through filesystem root, do not combine nested projects. Project server definitions replace same-named user definitions as a whole, rather than merging credentials/commands. Reject malformed selected config; do not silently fall back. | 02 |
-| D03 | Add mutually exclusive `--user` / `--project` to config-changing commands; default writes to user scope. Project scope requires a discovered project root rather than inventing one. A mutation must report when a trusted project override shadows its target. Editing a trusted project's content invalidates trust, including edits made by ripmcp. | 01, 02, 06, 07 |
-| D04 | Approve exact install forms: `install <server> --npx <package> [-- <args>...]`, `--uvx <package>`, `--docker <image>`, and `--config <file>` for a native server-definition JSON object. No implicit foreign-format import. Reject duplicate names in the target scope; no overwrite/update flag in v1. Require existing runtimes; do not install Node, Python tooling, or Docker. | 01, 06 |
-| D05 | Target requested MCP revision `2026-07-28`, tools-focused stdio and Streamable HTTP, no implicit older-version fallback. Verify the actual official revision, authorization requirements, and Rust library coverage before selecting dependencies. These notes are not a protocol audit. If unavailable or incompatible, ask the user rather than substitute a revision. | 03, 05 |
-| D06 | Full MCP tool-result envelope as JSON stdout, no automatic result cache or truncation. Tool-reported failures retain their envelope but exit nonzero. Other data commands use stable JSON shapes; diagnostics/prompts use stderr. Built-in shape accepts a file or `-`, with explicit bounds and truncation indicators. | 01, 07 |
-| D07 | Disable blocks future use but does not stop an existing local process. Explicit start of a disabled server fails. Listing servers is passive. `tools <server>` rejects disabled servers; `--all` includes disabled tools, not an override of server enablement. | 04, 07 |
-| D08 | Explicit browser OAuth login blocks until credentials persist, with timeout/cancel. If browser opening fails, print a URL and keep the local callback flow available. No device flow or remote-headless redirect in v1. Select a concrete compliant client-registration profile and OS-backed credential store after technical verification; fail closed if secure storage is unavailable. | 05 |
-| D09 | Clean uninstall deletes only exclusively owned tracked resources, confirms before all mutations, and retains retry records on failures. Self-uninstall includes exclusively owned data without a second cleanup flag, preserves project configs, and reports manual package-manager removal when necessary. Unknown binary ownership means preserve and report incomplete removal. | 08 |
-| D10 | When `XDG_RUNTIME_DIR` is missing/invalid, use an explicitly validated per-user private fallback under the system temporary directory. Refuse symlinks, foreign ownership and unsafe permissions; never accept an arbitrary existing socket. Exact fallback and locking behavior require security tests before approval. | 02, 04 |
+| ID (approved) | Approved decision                                                                                                                                                                                                                                                                                                                                                                          | Blocks         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| D01           | Linux-only v1; fail clearly on unsupported systems. One per-user supervisor with isolated scoped server identities.                                                                                                                                                                                                                                                                        | 02, 04, 08     |
+| D02           | Native versioned JSON config. Nearest ancestor `.ripmcp/config.json`, search through filesystem root, do not combine nested projects. Project server definitions replace same-named user definitions as a whole, rather than merging credentials/commands. Reject malformed selected config; do not silently fall back.                                                                    | 02             |
+| D03           | Add mutually exclusive `--user` / `--project` to config-changing commands; default writes to user scope. Project scope requires a discovered project root rather than inventing one. A mutation must report when a trusted project override shadows its target. Editing a trusted project's content invalidates trust, including edits made by ripmcp.                                     | 01, 02, 06, 07 |
+| D04           | Approve exact install forms: `install <server> --npx <package> [-- <args>...]`, `--uvx <package>`, `--docker <image>`, and `--config <file>` for a native server-definition JSON object. No implicit foreign-format import. Reject duplicate names in the target scope; no overwrite/update flag in v1. Require existing runtimes; do not install Node, Python tooling, or Docker.         | 01, 06         |
+| D05           | Target requested MCP revision `2026-07-28`, tools-focused stdio and Streamable HTTP, no implicit older-version fallback. Verify the actual official revision, authorization requirements, and Rust library coverage before selecting dependencies. These notes are not a protocol audit. If unavailable or incompatible, ask the user rather than substitute a revision.                   | 03, 05         |
+| D06           | Full MCP tool-result envelope as JSON stdout, no automatic result cache or truncation. Tool-reported failures retain their envelope but exit nonzero. Other data commands use stable JSON shapes; diagnostics/prompts use stderr. Built-in shape accepts a file or `-`, with explicit bounds and truncation indicators.                                                                    | 01, 07         |
+| D07           | Disable blocks future use but does not stop an existing local process. Explicit start of a disabled server fails. Listing servers is passive. `tools <server>` rejects disabled servers; `--all` includes disabled tools, not an override of server enablement.                                                                                                                            | 04, 07         |
+| D08           | Explicit browser OAuth login blocks until credentials persist, with timeout/cancel. If browser opening fails, print a URL and keep the local callback flow available. No device flow or remote-headless redirect in v1. Select a concrete compliant client-registration profile and OS-backed credential store after technical verification; fail closed if secure storage is unavailable. | 05             |
+| D09           | Clean uninstall deletes only exclusively owned tracked resources, confirms before all mutations, and retains retry records on failures. Self-uninstall includes exclusively owned data without a second cleanup flag, preserves project configs, and reports manual package-manager removal when necessary. Unknown binary ownership means preserve and report incomplete removal.         | 08             |
+| D10           | When `XDG_RUNTIME_DIR` is missing/invalid, use an explicitly validated per-user private fallback under the system temporary directory. Refuse symlinks, foreign ownership and unsafe permissions; never accept an arbitrary existing socket. Exact fallback and locking behavior require security tests before approval.                                                                   | 02, 04         |
 
 Additional engineering choices are recorded in [foundation contracts](contracts.md):
 timeout config/defaults, exit codes, shape bounds, delegated version resolution,

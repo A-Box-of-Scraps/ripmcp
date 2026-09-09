@@ -36,12 +36,12 @@ README.md
 Validate changes with:
 
 ```sh
-cargo fmt -q   # Format changes direcly instead of checking first and then fixing formatting issues.
+cargo fmt -q && dprint fmt --log-level=silent # Format changes direcly instead of checking first and then fixing formatting issues.
 cargo clippy -q --all-targets -- -D warnings
-cargo test -q
 cargo dylint --all -- --locked --all-targets
 (cd lints/explicit-local-types && cargo fmt -q && cargo test -q --locked)
 jscpd .
+cargo test -q
 ```
 
 ## Commits & Pull Requests

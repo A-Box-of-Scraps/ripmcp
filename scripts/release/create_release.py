@@ -34,7 +34,9 @@ def validate_tag(tag: str, manifest: Path, override: str) -> re.Match[str] | Non
         document = tomllib.loads(manifest.read_text())
         expected = f"v{document['package']['version']}"
         if tag != expected:
-            raise ValueError(f"Release tag {tag!r} does not match Cargo.toml version: {expected!r}")
+            raise ValueError(
+                f"Release tag {tag!r} does not match Cargo.toml version: {expected!r}"
+            )
     subprocess.run(["git", "check-ref-format", f"refs/tags/{tag}"], check=True)
     return version
 
@@ -51,10 +53,16 @@ def release_command(environment: dict[str, str], manifest: Path) -> list[str]:
     version = validate_tag(tag, manifest, override)
 
     command = [
-        "gh", "release", "create", tag,
-        "--repo", environment["GITHUB_REPOSITORY"],
-        "--title", tag,
-        "--target", environment["GITHUB_SHA"],
+        "gh",
+        "release",
+        "create",
+        tag,
+        "--repo",
+        environment["GITHUB_REPOSITORY"],
+        "--title",
+        tag,
+        "--target",
+        environment["GITHUB_SHA"],
         "--generate-notes",
     ]
     if is_tag and not override:
