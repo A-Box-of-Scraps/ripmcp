@@ -1,0 +1,18 @@
+import json
+import pathlib
+
+source = pathlib.Path("site/oauth/client.json")
+document = json.loads(source.read_text())
+assert document == {
+    "client_id": "https://a-box-of-scraps.github.io/ripmcp/oauth/client.json",
+    "client_name": "ripmcp",
+    "client_uri": "https://github.com/A-Box-of-Scraps/ripmcp",
+    "application_type": "native",
+    "redirect_uris": ["http://127.0.0.1:42813/oauth/callback"],
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "token_endpoint_auth_method": "none",
+}
+destination = pathlib.Path("_site/oauth/client.json")
+destination.parent.mkdir(parents=True, exist_ok=True)
+destination.write_bytes(source.read_bytes())
