@@ -27,20 +27,24 @@ jobs:
         run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy && rustup default stable
       - name: Check formatting
         run: cargo fmt --all -- --check
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624
+        with:
+          version: "1.23.0"
       - name: Install dprint
-        run: cargo install dprint --version 0.57.4 --locked
+        run: cargo binstall --no-confirm --locked dprint@0.57.4
       - name: Check dprint formatting
         run: dprint check
       - name: Test release scripts
         run: python3 -B -m unittest discover -s scripts/release -p 'test_*.py'
       - name: Install jscpd
-        run: cargo install jscpd --version 5.0.14 --locked
+        run: cargo binstall --no-confirm --locked jscpd@5.0.14
       - name: Check code duplication
         run: jscpd .
       - name: Lint
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: Install Dylint
-        run: cargo install cargo-dylint dylint-link --version 6.0.4 --locked
+        run: cargo binstall --no-confirm --locked cargo-dylint@6.0.4 dylint-link@6.0.4
       - name: Check explicit local types
         run: cargo dylint --all -- --locked --all-targets
       - name: Test custom lint
