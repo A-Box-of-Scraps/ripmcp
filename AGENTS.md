@@ -9,8 +9,12 @@ Here is an overview of the project:
 
 ```
 .cargo/config.toml
+.github/
+docs/
 lints/
+site/
 src/
+tests/
 .gitignore
 .gitattributes
 AGENTS.md
@@ -37,6 +41,7 @@ cargo clippy -q --all-targets -- -D warnings
 cargo test -q
 cargo dylint --all -- --locked --all-targets
 (cd lints/explicit-local-types && cargo fmt -q && cargo test -q --locked)
+jscpd .
 ```
 
 ## Commits & Pull Requests

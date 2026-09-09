@@ -295,7 +295,10 @@ fn policy_is_rechecked_after_waiting_for_a_surviving_owners_lease() {
         config: fixture.config().canonicalize().unwrap(),
     };
     let bytes: Vec<u8> = serde_json::to_vec(&(source, "s")).unwrap();
-    let key: String = format!("{:x}", Sha256::digest(bytes));
+    let key: String = Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
     let lock: fs::File = fs::OpenOptions::new()
         .read(true)
         .write(true)

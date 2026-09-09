@@ -1,0 +1,8 @@
+{
+  "threshold": 4,
+  "mode": "strict",
+  "minLines": 5,
+  "minTokens": 50,
+  "reporters": ["console"],
+  "ignore": ["**/.git/**", "**/target/**", "**/node_modules/**", "**/Cargo.lock", "docs/**"]
+}
