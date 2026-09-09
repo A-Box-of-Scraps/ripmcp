@@ -7,7 +7,7 @@ It brings the power of MCP to AI agent harnesses built on the idea that Bash Is 
 
 Here is an overview of the project:
 
-```
+```text
 .cargo/config.toml
 .github/
 docs/
@@ -40,7 +40,7 @@ cargo fmt -q && dprint fmt --log-level=silent # Format changes direcly instead o
 cargo clippy -q --all-targets -- -D warnings
 cargo dylint --all -- --locked --all-targets
 (cd lints/explicit-local-types && cargo fmt -q && cargo test -q --locked)
-jscpd .
+jscpd . --no-tips
 cargo test -q
 ```
 
