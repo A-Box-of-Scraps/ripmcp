@@ -27,7 +27,6 @@ README.md
 
 ## Development
 
-- Do not make changes to README.md unless it is explicitly requested by the user.
 - Do not add comments unless they explain unexpected or complex behavior, or when documentation is explicitly requested by the user. In all cases, keep them concise.
 - Use explicit types for non-primitive `let` bindings.
 
