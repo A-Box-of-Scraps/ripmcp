@@ -18,7 +18,8 @@ Local execution requires a prepared immutable installation record; installation 
 prepares local dependencies, verifies discovery without calls, retains successful
 local processes, and registers remote endpoints. Qualified remote tool operations
 and explicit auth login/status/logout are operational. Ordinary/clean uninstall and
-confirmed self-removal are operational. Full-system validation remains in phase 09.
+confirmed self-removal are operational. Phase 09 has passing repository/release gates and added full-system regressions,
+but remains blocked on end-to-end OAuth integration and peak-memory evidence.
 See the phase handoffs for validation evidence and integration contracts.
 
 The user's [confirmed command list](commands.md) overrides tentative spellings in
@@ -37,7 +38,7 @@ technical choices below are not silently promoted to user-approved decisions.
 | [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Done |
 | [07](07-tool-workflow.md) | Tool policy, discovery, qualified/shorthand calls, shape | 03, 04, 05, 06 | Done |
 | [08](08-cleanup.md) | Uninstall, clean uninstall, self-removal and recovery | 02, 04, 06, 07 | Done |
-| [09](09-v1-validation.md) | Full-system regression, failure recovery and v1 readiness | All previous phases | Not started |
+| [09](09-v1-validation.md) | Full-system regression, failure recovery and v1 readiness | All previous phases | Blocked |
 
 Default execution order is numeric. Phase 05 can run alongside 04 after 03.
 Do not start a dependent integration until its prerequisite contracts are stable.

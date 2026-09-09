@@ -95,3 +95,10 @@ precedence over tentative spellings in those notes.
   ownership, credential-reference syntax, passive untrusted reads, trust prompts,
   official-source inspection and fixture limits.
 - `index.md`: user-approved D01-D10, architecture and overall phase status.
+
+## Phase 09 validation follow-up (September 9, 2026)
+
+`src/lib.rs` now matches the typed command exhaustively instead of retaining an
+unreachable unimplemented-handler fallback. The public-form/scope matrix in
+`tests/validation/coverage.rs` also detects added public subcommands with no matrix
+entry. No CLI or error-code contract changed. Phase 09 records full gate evidence.

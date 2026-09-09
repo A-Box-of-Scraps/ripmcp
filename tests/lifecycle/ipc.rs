@@ -74,7 +74,7 @@ async fn per_server_queue_is_bounded_and_disconnect_releases_queued_work() {
         .unwrap();
     let cancellation: CancellationToken = CancellationToken::new();
     let mut tasks: tokio::task::JoinSet<Result<Value, Error>> = tokio::task::JoinSet::new();
-    for _ in 0..16 {
+    for _ in 0..17 {
         let paths: Paths = Paths::new(fixture.env.clone());
         let request: LocalRequest = request(
             &fixture,
@@ -85,7 +85,8 @@ async fn per_server_queue_is_bounded_and_disconnect_releases_queued_work() {
         );
         let token: CancellationToken = cancellation.clone();
         tasks.spawn(async move {
-            let operation: Operation = Operation::new(Deadline::new(Duration::from_secs(5)), token);
+            let operation: Operation =
+                Operation::new(Deadline::new(Duration::from_secs(10)), token);
             Connection::existing(&paths, &operation)
                 .await?
                 .unwrap()
@@ -93,21 +94,19 @@ async fn per_server_queue_is_bounded_and_disconnect_releases_queued_work() {
                 .await
         });
     }
-    let mut full = false;
-    for _ in 0..20 {
-        tokio::time::sleep(Duration::from_millis(10)).await;
-        let result: Result<Value, Error> = connection(&fixture)
-            .await
-            .local(request(&fixture, Action::Start), &operation(20))
-            .await;
-        if result.is_err_and(|error| error.message.contains("queue is full")) {
-            full = true;
-            break;
-        }
-    }
+    // A probing request could occupy the last slot and reject one of the workers.
+    let first: Result<Result<Value, Error>, tokio::time::error::Elapsed> =
+        tokio::time::timeout(Duration::from_secs(5), async {
+            tasks.join_next().await.unwrap().unwrap()
+        })
+        .await;
     cancellation.cancel();
     while tasks.join_next().await.is_some() {}
-    assert!(full);
+    assert!(
+        first
+            .unwrap()
+            .is_err_and(|error| error.message.contains("queue is full"))
+    );
     let value: Value = connection(&fixture)
         .await
         .local(

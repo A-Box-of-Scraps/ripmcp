@@ -142,3 +142,13 @@ precedence over tentative spellings in those notes.
   above are not implemented or claimed complete by this phase.
 - Next action: Proceed to phase 05's authorization and secure-store verification
   gates, using the completed phase 03 transport and phase 04 lifecycle contracts.
+
+## Phase 09 validation follow-up (September 9, 2026)
+
+The clean isolated gate exposed a race in the queue-capacity integration test:
+its short-lived start probe could occupy the last slot and reject a stalled
+worker, leaving the next probe unable to observe saturation. The corrected test
+submits 17 stalled requests against 16 permits, observes a worker's queue-full
+response, then cancels/drains remaining work and verifies the server is reused.
+No production supervisor behavior or limits changed. The regression passed 20
+consecutive targeted runs and the full repository gate; see phase 09 for details.
