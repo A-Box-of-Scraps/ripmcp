@@ -8,6 +8,10 @@ mod container;
 mod fixture;
 #[path = "lifecycle/input.rs"]
 mod input;
+#[path = "lifecycle/interactive.rs"]
+mod interactive;
+#[path = "lifecycle/interactive_remote.rs"]
+mod interactive_remote;
 #[path = "lifecycle/ipc.rs"]
 mod ipc;
 #[path = "lifecycle/local.rs"]

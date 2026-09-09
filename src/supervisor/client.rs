@@ -44,19 +44,30 @@ impl Connection {
         operation
             .run(async {
                 wire::write_limit(&mut self.stream, &request, wire::DATA_LIMIT).await?;
-                let response: wire::Response =
-                    wire::read_limit(&mut self.stream, wire::DATA_LIMIT).await?;
-                match response {
-                    wire::Response::Success(json) => {
-                        crate::json::parse(json.as_bytes()).map_err(|_| incompatible())
-                    }
-                    wire::Response::Failure { kind, message } => Err(Error {
-                        kind,
-                        message: std::borrow::Cow::Owned(message),
-                    }),
-                }
+                self.receive(&request).await
             })
             .await
+    }
+    async fn receive(&mut self, request: &Request) -> Result<serde_json::Value, Error> {
+        loop {
+            let response: wire::Response =
+                wire::read_limit(&mut self.stream, wire::DATA_LIMIT).await?;
+            match response {
+                wire::Response::Interaction(prompt) => {
+                    present(request, &prompt)?;
+                    wire::write(&mut self.stream, &Reply::Presented).await?;
+                }
+                wire::Response::Success(json) => {
+                    return crate::json::parse(json.as_bytes()).map_err(|_| incompatible());
+                }
+                wire::Response::Failure { kind, message } => {
+                    return Err(Error {
+                        kind,
+                        message: std::borrow::Cow::Owned(message),
+                    });
+                }
+            }
+        }
     }
     pub async fn existing(paths: &Paths, operation: &Operation) -> Result<Option<Self>, Error> {
         operation.remaining()?;
@@ -220,4 +231,20 @@ impl Drop for Launch {
             let _: std::io::Result<std::process::ExitStatus> = child.wait();
         }
     }
+}
+
+fn present(request: &Request, prompt: &crate::mcp::interaction::Prompt) -> Result<(), Error> {
+    let Request::Local { request, .. }: &Request = request else {
+        return Err(incompatible());
+    };
+    if !matches!(
+        request.action,
+        super::Action::Call {
+            interactive: true,
+            ..
+        }
+    ) {
+        return Err(incompatible());
+    }
+    prompt.present(&request.server)
 }

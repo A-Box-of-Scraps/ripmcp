@@ -3,7 +3,7 @@ use crate::error::Error;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-pub(super) const VERSION: u32 = 3;
+pub(super) const VERSION: u32 = 4;
 pub(super) const FRAME_LIMIT: usize = 4096;
 
 #[derive(Deserialize, Serialize)]
@@ -34,6 +34,7 @@ pub(super) enum Request {
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub(super) enum Reply {
     Ready,
+    Presented,
     Pong,
     Stopping,
     Incompatible,
@@ -42,6 +43,7 @@ pub(super) enum Reply {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) enum Response {
+    Interaction(crate::mcp::interaction::Prompt),
     Success(String),
     Failure {
         kind: crate::error::ErrorKind,

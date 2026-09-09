@@ -102,6 +102,7 @@ mod tests {
     #[test]
     fn inline_call_arguments_use_the_same_lossless_parser() {
         let call: crate::cli::Call = crate::cli::Call {
+            interactive: false,
             positionals: vec![
                 "tool".to_owned(),
                 r#"{"$serde_json::private::Number":"123"}"#.to_owned(),

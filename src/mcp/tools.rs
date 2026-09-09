@@ -178,6 +178,21 @@ impl Client {
         arguments: Value,
         operation: &Operation,
     ) -> Result<ToolResult, Error> {
+        self.call_tool_checked(tool, arguments, operation, || async { Ok(()) })
+            .await
+    }
+
+    pub(crate) async fn call_tool_checked<F, Fut>(
+        &self,
+        tool: &Tool,
+        arguments: Value,
+        operation: &Operation,
+        recheck: F,
+    ) -> Result<ToolResult, Error>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<(), Error>>,
+    {
         if !arguments.is_object() {
             return Err(Error::new(
                 ErrorKind::Usage,
@@ -189,17 +204,22 @@ impl Client {
         } else {
             HeaderMap::new()
         };
-        let result: Value = self
-            .request(
-                "tools/call",
-                json!({"name": tool.name(), "arguments": arguments}),
-                headers,
-                operation,
-            )
-            .await?;
-        let result: Result<ToolResult, Error> = ToolResult::parse(result);
-        operation.remaining()?;
-        result
+        let mut params: Value = json!({"name": tool.name(), "arguments": arguments});
+        for _ in 0..16 {
+            recheck().await?;
+            let result: Value = self
+                .request("tools/call", params.clone(), headers.clone(), operation)
+                .await?;
+            operation.remaining()?;
+            if result["resultType"] != "input_required" || !operation.interactive() {
+                let parsed: Result<ToolResult, Error> = ToolResult::parse(result);
+                operation.remaining()?;
+                return parsed;
+            }
+            recheck().await?;
+            super::interaction::continue_request(&result, &mut params, operation).await?;
+        }
+        Err(limit_error())
     }
 }
 

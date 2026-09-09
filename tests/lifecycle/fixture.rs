@@ -164,7 +164,7 @@ fn shutdown(fixture: &Fixture) {
     let Ok(record): Result<Value, serde_json::Error> = ripmcp::json::parse(&bytes) else {
         return;
     };
-    let hello: Value = json!({"protocol": 3, "build": env!("CARGO_PKG_VERSION"), "nonce": record["nonce"], "context": record["context"]});
+    let hello: Value = json!({"protocol": 4, "build": env!("CARGO_PKG_VERSION"), "nonce": record["nonce"], "context": record["context"]});
     let _: std::io::Result<()> = stream.set_write_timeout(Some(std::time::Duration::from_secs(1)));
     for value in [hello, json!("shutdown")] {
         let bytes: Vec<u8> = serde_json::to_vec(&value).unwrap();

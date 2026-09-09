@@ -63,9 +63,31 @@ async fn execute(command: Command, timeout: Option<u64>) -> Result<(), Error> {
         )
         .await;
     }
+    invoke_command(command, &effective, &paths, &cwd, operation).await
+}
+
+async fn invoke_command(
+    command: Command,
+    effective: &Effective,
+    paths: &Paths,
+    cwd: &std::path::Path,
+    mut operation: Operation,
+) -> Result<(), Error> {
+    if matches!(&command, Command::Call(call) if call.interactive) {
+        operation.enable_interaction("selected server".to_owned());
+    }
     let (name, action): (String, Action) =
-        action(command, &effective, &operation, &paths, &cwd).await?;
-    let value: Value = request(&paths, &cwd, &name, &action, &operation).await?;
+        action(command, effective, &operation, paths, cwd).await?;
+    if matches!(
+        action,
+        Action::Call {
+            interactive: true,
+            ..
+        }
+    ) {
+        operation.enable_interaction(name.clone());
+    }
+    let value: Value = request(paths, cwd, &name, &action, &operation).await?;
     write_result(&action, &value)
 }
 
@@ -141,6 +163,7 @@ async fn action(
             (
                 name,
                 Action::Call {
+                    interactive: request.interactive,
                     tool: request.tool,
                     arguments,
                 },

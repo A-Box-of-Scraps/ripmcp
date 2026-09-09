@@ -205,7 +205,9 @@ async fn invoke(
             let tool: Tool = client.tool(tool, operation).await?;
             Ok(json!({"schema_version": 1, "tool": tool}))
         }
-        Action::Call { tool, arguments } => {
+        Action::Call {
+            tool, arguments, ..
+        } => {
             let arguments: Value =
                 crate::json::parse(arguments.as_bytes()).map_err(|_| super::invalid())?;
             let tool: Tool = client.tool(tool, operation).await?;
@@ -218,7 +220,14 @@ async fn invoke(
                     "configuration changed before invocation",
                 ));
             }
-            let result: ToolResult = client.call_tool(&tool, arguments, operation).await?;
+            let result: ToolResult = client
+                .call_tool_checked(&tool, arguments, operation, || async {
+                    recheck(&Paths::from_environment(), cwd, server.identity())?;
+                    Effective::load(&Paths::from_environment(), cwd)?
+                        .authorize(&server.identity().name)?
+                        .require_enabled(Some(tool.name()))
+                })
+                .await?;
             Ok(result.into_envelope())
         }
         _ => Err(super::invalid()),

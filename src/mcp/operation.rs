@@ -6,6 +6,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 pub struct Operation {
+    pub(super) interaction: Option<super::interaction::Interaction>,
     deadline: Deadline,
     cancellation: CancellationToken,
 }
@@ -13,6 +14,7 @@ pub struct Operation {
 impl Operation {
     pub fn new(deadline: Deadline, cancellation: CancellationToken) -> Self {
         Self {
+            interaction: None,
             deadline,
             cancellation,
         }

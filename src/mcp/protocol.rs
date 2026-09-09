@@ -118,7 +118,7 @@ pub(super) fn complete(value: &Value) -> Result<(), Error> {
         Some("complete") => Ok(()),
         Some("input_required") => Err(Error::new(
             ErrorKind::Unsupported,
-            "tool requires unsupported client input; invocation was not replayed",
+            "tool requires client input; use --interactive for URL interaction; invocation was not replayed",
         )),
         Some(_) => Err(Error::new(
             ErrorKind::Unsupported,

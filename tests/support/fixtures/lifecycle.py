@@ -69,13 +69,55 @@ def reply(request, result):
     )
 
 
+def interaction(request):
+    if not mode.startswith("interactive"):
+        return False
+    params = request["params"]
+    with open(root + "/interactive-requests", "a") as out:
+        out.write(json.dumps(params) + "\n")
+    if "inputResponses" not in params:
+        prompt = {
+            "method": "elicitation/create",
+            "params": {
+                "mode": "url",
+                "url": "https://example.com/authorize?state=private",
+                "message": "Enter code TEST-CODE to authorize.",
+            },
+        }
+        if mode == "interactive_form":
+            prompt["params"]["mode"] = "form"
+        reply(
+            request,
+            {
+                "resultType": "input_required",
+                "inputRequests": {"login": prompt},
+                "requestState": "opaque-state",
+            },
+        )
+        return True
+    assert params["inputResponses"] == {"login": {"action": "accept"}}
+    assert params["requestState"] == "opaque-state"
+    assert params["_meta"]["io.modelcontextprotocol/clientCapabilities"] == {
+        "elicitation": {"url": {}}
+    }
+    open(root + "/resumed", "w").close()
+    if mode == "interactive_timeout":
+        return True
+    if mode == "interactive_wait":
+        while not os.path.exists(root + "/release"):
+            time.sleep(0.01)
+    with open(root + "/executed", "a") as out:
+        out.write("once\n")
+    return False
+
+
 for line in sys.stdin:
     request = json.loads(line)
     method = request["method"]
     if method == "notifications/cancelled":
         with open(root + "/cancelled", "a") as out:
             out.write(request["params"]["requestId"] + "\n")
-        if mode == "cancel_ack":
+        if mode in ("cancel_ack", "interactive_timeout"):
             reply(
                 {"id": request["params"]["requestId"]},
                 {"resultType": "complete", "content": []},
@@ -105,6 +147,8 @@ for line in sys.stdin:
     elif method == "tools/call":
         with open(root + "/calls", "a") as out:
             out.write(str(os.getpid()) + "\n")
+        if interaction(request):
+            continue
         if request["params"]["arguments"].get("wait_file"):
             while not os.path.exists(root + "/release"):
                 time.sleep(0.01)

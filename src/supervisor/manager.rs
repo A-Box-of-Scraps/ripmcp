@@ -35,9 +35,17 @@ pub enum Action {
     SelfUninstall(crate::cleanup::SelfRequest),
     Start,
     Stop,
-    Tools { all: bool },
-    Tool { tool: String },
-    Call { tool: String, arguments: String },
+    Tools {
+        all: bool,
+    },
+    Tool {
+        tool: String,
+    },
+    Call {
+        tool: String,
+        arguments: String,
+        interactive: bool,
+    },
 }
 
 pub(super) struct Manager {

@@ -138,7 +138,11 @@ impl Client {
             .next_id
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
             .map_err(|_| super::limit_error())?;
-        let message: Value = protocol::request(&format!("ripmcp-{number}"), method, params);
+        let mut message: Value = protocol::request(&format!("ripmcp-{number}"), method, params);
+        if operation.interactive() {
+            message["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"] =
+                json!({"elicitation": {"url": {}}});
+        }
         tokio::select! {
             biased;
             () = self.stop.cancelled() => Err(connection_error()),

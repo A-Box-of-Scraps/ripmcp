@@ -160,3 +160,24 @@ fn output_preserves_envelope_and_reports_io_failure() {
         ripmcp::error::ErrorKind::Io
     );
 }
+
+#[test]
+fn interactive_is_explicit_and_only_available_for_call() {
+    let cli: Cli = Cli::try_parse_from([
+        "ripmcp",
+        "call",
+        "s",
+        "tool",
+        "{}",
+        "--interactive",
+        "--timeout",
+        "180",
+    ])
+    .unwrap();
+    assert_eq!(cli.timeout, Some(180));
+    let Some(Command::Call(call)): Option<Command> = cli.command else {
+        panic!("expected call");
+    };
+    assert!(call.into_request().unwrap().interactive);
+    assert!(Cli::try_parse_from(["ripmcp", "tools", "s", "--interactive"]).is_err());
+}

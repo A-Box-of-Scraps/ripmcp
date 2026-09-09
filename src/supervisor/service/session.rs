@@ -84,24 +84,28 @@ impl Session {
         let remaining: Duration = budget.checked_sub(elapsed).unwrap_or_default();
         let cancellation: CancellationToken = self.stop.child_token();
         let _cancel: tokio_util::sync::DropGuard = cancellation.clone().drop_guard();
-        let operation: Arc<Operation> = Arc::new(Operation::new(
-            Deadline::new(remaining),
-            cancellation.clone(),
-        ));
+        let (sender, mut prompts): (
+            tokio::sync::mpsc::Sender<crate::mcp::interaction::Pending>,
+            tokio::sync::mpsc::Receiver<crate::mcp::interaction::Pending>,
+        ) = tokio::sync::mpsc::channel(1);
+        let mut operation: Operation =
+            Operation::new(Deadline::new(remaining), cancellation.clone());
+        if matches!(
+            request.action,
+            super::super::Action::Call {
+                interactive: true,
+                ..
+            }
+        ) {
+            operation.forward_interaction(sender);
+        }
+        let operation: Arc<Operation> = Arc::new(operation);
         let task_operation: Arc<Operation> = operation.clone();
         let manager: Arc<Manager> = self.manager.clone();
         let mut task: tokio::task::JoinHandle<Result<Value, Error>> =
             tokio::spawn(async move { manager.local(request, &task_operation).await });
-        let mut byte: [u8; 1] = [0];
-        let result: Result<Value, Error> = tokio::select! {
-            biased;
-            _ = stream.read(&mut byte) => {
-                cancellation.cancel();
-                let _: Result<Result<Value, Error>, tokio::task::JoinError> = task.await;
-                return Err(unavailable());
-            },
-            result = &mut task => result.map_err(|_| unavailable())?,
-        };
+        let result: Result<Value, Error> =
+            relay(stream, &mut task, &mut prompts, &operation, &cancellation).await?;
         if operation.remaining().is_err() {
             return respond(
                 stream,
@@ -125,4 +129,34 @@ async fn respond(stream: &mut UnixStream, result: Result<Value, Error>) -> Resul
         },
     };
     wire::write_limit(stream, &response, wire::DATA_LIMIT).await
+}
+
+async fn relay(
+    stream: &mut UnixStream,
+    task: &mut tokio::task::JoinHandle<Result<Value, Error>>,
+    prompts: &mut tokio::sync::mpsc::Receiver<crate::mcp::interaction::Pending>,
+    operation: &Operation,
+    cancellation: &CancellationToken,
+) -> Result<Result<Value, Error>, Error> {
+    let mut byte: [u8; 1] = [0];
+    loop {
+        tokio::select! {
+            biased;
+            _ = stream.read(&mut byte) => {
+                cancellation.cancel();
+                let _: Result<Result<Value, Error>, tokio::task::JoinError> = task.await;
+                return Err(unavailable());
+            },
+            Some(pending) = prompts.recv() => {
+                operation.run(async {
+                    wire::write_limit(stream, &Response::Interaction(pending.prompt), wire::DATA_LIMIT).await?;
+                    if wire::read::<Reply>(stream).await? != Reply::Presented {
+                        return Err(incompatible());
+                    }
+                    pending.presented.send(()).map_err(|_| unavailable())
+                }).await?;
+            },
+            result = &mut *task => return result.map_err(|_| unavailable()),
+        }
+    }
 }

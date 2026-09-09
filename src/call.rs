@@ -10,6 +10,7 @@ pub enum Input {
 }
 
 pub struct Request {
+    pub interactive: bool,
     pub server: Option<String>,
     pub tool: String,
     pub input: Input,
@@ -35,6 +36,7 @@ impl Call {
         }
         let tool: String = names.pop().ok_or_else(invalid)?;
         Ok(Request {
+            interactive: self.interactive,
             server: names.pop(),
             tool,
             input,

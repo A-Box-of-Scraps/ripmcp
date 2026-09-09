@@ -1,6 +1,7 @@
 mod client;
 mod headers;
 mod http;
+pub(crate) mod interaction;
 mod operation;
 mod protocol;
 mod sse;

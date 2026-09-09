@@ -29,6 +29,11 @@ below are not approvals of an unverified implementation.
   call. A timeout exits 9. Neither implies a tool's side effects were rolled back.
 - Never automatically replay a tool invocation after uncertain delivery. These
   contracts do not add runtime handlers or pretend placeholder handlers time out.
+- `call --interactive` may continue a structured `input_required` result with URL
+  elicitation responses and opaque request state. It never retries a completed
+  tool result, a transport failure or an ambiguous delivery. Each continuation
+  rechecks configuration and policy and shares the original operation deadline.
+  At most 16 request rounds and 16 URL prompts per round are supported.
 
 ## Exit codes and output
 
@@ -65,6 +70,12 @@ below are not approvals of an unverified implementation.
   deliberate exception to URL redaction required by D08. Do not log it or print
   token/callback URLs. Safe field names, server identities and cleanup target paths
   may be displayed with control characters escaped and credential parts removed.
+- Explicit interactive tool calls also display validated elicitation URLs and
+  server-provided instructions (including device codes) on stderr, never in result
+  JSON or persistent logs. Instructions are escaped and attributed to the selected
+  server. URLs require HTTPS, or HTTP on loopback, with no embedded credentials.
+  Presentation acknowledges the prompt, not authorization completion: only the
+  server's final tool response completes the command. Navigation remains manual.
 - Shape reports names, types and array lengths, not scalar values. Depth and width
   bounds affect inspection only; each omitted subtree/entry set must be marked
   truncated, with counts when known. It neither caches nor truncates tool results.

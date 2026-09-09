@@ -133,6 +133,8 @@ pub struct Tool {
 
 #[derive(Args)]
 pub struct Call {
+    #[arg(long, help = "Allow URL interaction and wait for the tool to finish")]
+    pub interactive: bool,
     #[arg(required = true, num_args = 1..=3)]
     pub positionals: Vec<String>,
     #[arg(long)]

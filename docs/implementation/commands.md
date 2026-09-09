@@ -32,6 +32,7 @@ ripmcp call <server> <tool> --input -       # Read arguments from stdin
 ripmcp call <tool> '<json>'
 ripmcp call <tool> --input args.json
 ripmcp call <tool> --input -
+ripmcp call <server> <tool> '<json>' --interactive --timeout 180
 
 ripmcp shape <file>                        # Inspect saved JSON structure without invoking anything
 
@@ -73,6 +74,14 @@ ripmcp install <server> --config <file>
   `--width` defaults to 100, range 1-10000. Inspection never invokes tools.
 - Global `--timeout <seconds>` accepts a positive integer before or after a
   subcommand. See contracts.md for configuration and deadline semantics.
+- `call --interactive` opts into URL elicitation for server-managed login or
+  other external user interaction. Validated URLs and instructions are printed
+  immediately to stderr; the user opens the URL manually. The command continues
+  the structured MCP request and waits for the final result under the original
+  deadline. Ctrl-C cancels. Without this flag, input-required results fail without
+  continuation. Form input, sampling and plain-text login parsing are unsupported.
+  This does not change remote OAuth `auth login`, which already waits, or add
+  `auth login` support for local servers.
 - `-y` is accepted only with clean server uninstall or self-uninstall. It skips
   confirmation, never expands ownership or deletion scope. Self-uninstall cannot
   accompany another command. `--clean` and `--include-projects` are not self-uninstall flags.

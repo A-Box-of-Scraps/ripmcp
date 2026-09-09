@@ -79,6 +79,7 @@ async fn per_server_queue_is_bounded_and_disconnect_releases_queued_work() {
         let request: LocalRequest = request(
             &fixture,
             Action::Call {
+                interactive: false,
                 tool: "echo".to_owned(),
                 arguments: "{\"stall\":true}".to_owned(),
             },
@@ -113,6 +114,7 @@ async fn per_server_queue_is_bounded_and_disconnect_releases_queued_work() {
             request(
                 &fixture,
                 Action::Call {
+                    interactive: false,
                     tool: "echo".to_owned(),
                     arguments: "{}".to_owned(),
                 },
@@ -133,6 +135,7 @@ async fn shutdown_cancels_active_requests_before_draining_owned_children() {
     let call: LocalRequest = request(
         &fixture,
         Action::Call {
+            interactive: false,
             tool: "echo".to_owned(),
             arguments: "{\"stall\":true}".to_owned(),
         },

@@ -21,7 +21,7 @@ pub(super) fn shutdown_best_effort(fixture: &Fixture) {
     let Ok(record): Result<Value, serde_json::Error> = ripmcp::json::parse(&bytes) else {
         return;
     };
-    let request: Value = json!({"protocol": 3, "build": env!("CARGO_PKG_VERSION"), "nonce": record["nonce"], "context": record["context"]});
+    let request: Value = json!({"protocol": 4, "build": env!("CARGO_PKG_VERSION"), "nonce": record["nonce"], "context": record["context"]});
     for value in [request, json!("shutdown")] {
         let bytes: Vec<u8> = serde_json::to_vec(&value).unwrap();
         let _: std::io::Result<()> = stream.write_all(&(bytes.len() as u32).to_be_bytes());
@@ -52,7 +52,7 @@ async fn receive(stream: &mut UnixStream) -> Value {
 fn hello(fixture: &Fixture) -> Value {
     let record: Value =
         ripmcp::json::parse(&fs::read(fixture.runtime().join("supervisor.json")).unwrap()).unwrap();
-    json!({"protocol": 3, "build": env!("CARGO_PKG_VERSION"), "nonce": record["nonce"], "context": record["context"]})
+    json!({"protocol": 4, "build": env!("CARGO_PKG_VERSION"), "nonce": record["nonce"], "context": record["context"]})
 }
 
 #[tokio::test]

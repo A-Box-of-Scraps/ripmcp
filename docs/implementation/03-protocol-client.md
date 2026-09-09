@@ -91,9 +91,12 @@ is available; no replacement revision or user decision was necessary.
   notifications are parsed without exposing upstream text. Server-originated
   JSON-RPC requests violate this revision and fail the transport; clients must
   not answer them with JSON-RPC responses.
-- No sampling, elicitation, roots, MRTR continuation, subscriptions, tasks,
+- Initially no sampling, elicitation, roots, MRTR continuation, subscriptions, tasks,
   resources, prompts, logging-level requests, or caching capabilities are
   advertised. `input_required` is an explicit unsupported result, never a replay.
+  The later `call --interactive` addition supports bounded URL elicitation
+  continuations only; see commands.md and contracts.md. Noninteractive behavior
+  remains unchanged.
   Unknown result kinds are unsupported; malformed envelopes are protocol errors.
 - There is no discovery/result cache or subscription stream to invalidate.
   Every call completes fresh paginated discovery before obtaining its schema and

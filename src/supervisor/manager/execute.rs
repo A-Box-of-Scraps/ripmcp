@@ -91,12 +91,18 @@ impl Manager {
                 self.recheck(request, revision, operation).await?;
                 Ok(json!({"schema_version": 1, "tool": tool}))
             }
-            Action::Call { tool, arguments } => {
+            Action::Call {
+                tool, arguments, ..
+            } => {
                 let arguments: Value = crate::json::parse(arguments.as_bytes())
                     .map_err(|_| Error::new(ErrorKind::Usage, "invalid tool arguments"))?;
                 let tool: Tool = client.tool(tool, operation).await?;
                 self.recheck(request, revision, operation).await?;
-                let result: ToolResult = client.call_tool(&tool, arguments, operation).await?;
+                let result: ToolResult = client
+                    .call_tool_checked(&tool, arguments, operation, || {
+                        self.recheck(request, revision, operation)
+                    })
+                    .await?;
                 Ok(result.into_envelope())
             }
             _ => Err(super::super::incompatible()),
@@ -111,6 +117,9 @@ impl Manager {
     ) -> Result<(), Error> {
         let effective: Effective = self.effective(request)?;
         let server: AuthorizedServer<'_> = effective.authorize(&request.server)?;
+        if let Action::Call { tool, .. } = &request.action {
+            server.require_enabled(Some(tool))?;
+        }
         let key: String = key(server.identity())?;
         let prepared: Prepared =
             Prepared::load(&server, &self.paths, &request.environment, &key, operation).await?;
