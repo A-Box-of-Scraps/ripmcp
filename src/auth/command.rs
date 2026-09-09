@@ -75,6 +75,8 @@ async fn execute(command: Auth, timeout: Option<u64>) -> Result<(), Error> {
         signal.token(),
     );
     let provider: Provider = Provider::new(endpoint)?;
+    let _maintenance: crate::storage::Maintenance =
+        crate::storage::Maintenance::acquire(&paths, false, &operation).await?;
     let identity: Identity = server.identity().clone();
     let state: &str = match command {
         Auth::Login(_) => {

@@ -52,18 +52,17 @@ fn six_call_forms() {
 }
 
 #[test]
-fn command_forms_have_explicit_unsupported_errors() {
+fn cleanup_forms_reject_missing_targets_or_missing_confirmation() {
     let sandbox: Sandbox = Sandbox::new();
     let forms: &[&[&str]] = &[
         &["uninstall", "s"],
         &["uninstall", "s", "--clean"],
         &["uninstall", "s", "--clean", "-y"],
-        &["--uninstall-everything", "-y"],
         &["--uninstall-everything"],
     ];
     for args in forms {
         let output: Output = sandbox.run(args);
-        assert_eq!(output.status.code(), Some(10), "{args:?}: {output:?}");
+        assert_eq!(output.status.code(), Some(3), "{args:?}: {output:?}");
         assert!(output.stdout.is_empty());
         assert!(!output.stderr.is_empty());
     }

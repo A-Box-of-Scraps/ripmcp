@@ -33,6 +33,7 @@ fn journal_survives_unregister_and_retains_custom_cleanup_retry_records() {
         origin: Origin::Standalone,
         ownership: Ownership::Exclusive,
         cleanup: CleanupState::RetryRequired,
+        filesystem: None,
     });
     installation.retained_data.push(identity.clone());
     let operation: Operation = Operation {

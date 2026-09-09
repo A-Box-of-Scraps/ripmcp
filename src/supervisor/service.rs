@@ -14,15 +14,22 @@ use tokio_util::sync::CancellationToken;
 
 pub(super) async fn serve() -> Result<(), Error> {
     let paths: Paths = Paths::from_environment();
+    let startup: crate::mcp::Operation = crate::mcp::Operation::new(
+        crate::deadline::Deadline::new(std::time::Duration::from_secs(60)),
+        crate::mcp::CancellationToken::new(),
+    );
+    let admission: crate::storage::Maintenance =
+        crate::storage::Maintenance::acquire(&paths, false, &startup).await?;
     let endpoint: Endpoint = Endpoint::open(&paths, true)?.ok_or_else(invalid)?;
     // State-scoped locks also fence clients that change XDG_RUNTIME_DIR.
     let state: Directory =
         Directory::open(&paths.directory(Location::State)?, true, true)?.ok_or_else(invalid)?;
     let lock: File = state
-        .file(
+        .recorded_file(
             ".supervisor.lock",
             rustix::fs::OFlags::RDWR | rustix::fs::OFlags::CREATE,
-            true,
+            &paths.directory(Location::State)?,
+            &crate::deadline::Deadline::new(std::time::Duration::from_secs(60)),
         )?
         .ok_or_else(invalid)?;
     lock.try_lock().map_err(|_| unavailable())?;
@@ -32,6 +39,7 @@ pub(super) async fn serve() -> Result<(), Error> {
     let mut interrupt: tokio::signal::unix::Signal =
         signal(tokio::signal::unix::SignalKind::interrupt())?;
     let (listener, record): (UnixListener, Record) = endpoint.bind()?;
+    drop(admission);
     let record: Arc<Record> = Arc::new(record);
     let stop: CancellationToken = CancellationToken::new();
     let manager: Arc<Manager> = Arc::new(Manager::new(paths, Barrier::default()));

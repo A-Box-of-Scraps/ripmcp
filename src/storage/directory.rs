@@ -11,8 +11,37 @@ use std::path::{Component, Path};
 pub struct Directory(File);
 
 impl Directory {
+    pub(crate) fn recorded_file(
+        &self,
+        name: &str,
+        flags: OFlags,
+        ledger: &Path,
+        deadline: &crate::deadline::Deadline,
+    ) -> Result<Option<File>, Error> {
+        match self.file(name, flags | OFlags::EXCL, true) {
+            Ok(Some(file)) => {
+                let root: std::path::PathBuf =
+                    std::fs::read_link(self.descriptor_path()).map_err(io_error)?;
+                let path: std::path::PathBuf = root.join(name);
+                let filesystem: crate::ownership::Filesystem =
+                    crate::ownership::Filesystem::from_created(
+                        &path,
+                        &root,
+                        &file.metadata().map_err(io_error)?,
+                        &self.metadata()?,
+                    )?;
+                crate::ownership::artifacts::record(ledger, &path, filesystem, deadline)?;
+                Ok(Some(file))
+            }
+            Ok(None) => Ok(None),
+            Err(_) => self.file(name, flags, true),
+        }
+    }
     pub(crate) fn sync(&self) -> Result<(), Error> {
         self.0.sync_all().map_err(io_error)
+    }
+    pub(crate) fn metadata(&self) -> Result<Metadata, Error> {
+        self.0.metadata().map_err(io_error)
     }
     pub fn open(path: &Path, create: bool, private: bool) -> Result<Option<Self>, Error> {
         if !path.is_absolute() {

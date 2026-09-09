@@ -48,7 +48,7 @@ impl TrustStore {
     pub fn new(paths: &Paths) -> Result<Self, Error> {
         let directory: PathBuf = paths.directory(Location::State)?;
         Ok(Self {
-            store: Store::new(directory.clone(), "trust.json", true)?,
+            store: Store::new(directory.clone(), "trust.json", true)?.recording(paths)?,
             directory,
         })
     }
@@ -133,6 +133,17 @@ pub fn run(paths: &Paths, start: &Path, timeout: Option<u64>) -> Result<(), Erro
         ));
     }
     let seconds = timeout.unwrap_or(effective.timeouts().operation_seconds.get());
+    let operation: crate::mcp::Operation = crate::mcp::Operation::new(
+        Deadline::new(Duration::from_secs(seconds)),
+        crate::mcp::CancellationToken::new(),
+    );
+    let runtime: tokio::runtime::Runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(crate::storage::io_error)?;
+    let _maintenance: crate::storage::Maintenance = runtime.block_on(
+        crate::storage::Maintenance::acquire(paths, false, &operation),
+    )?;
     TrustStore::new(paths)?
         .approve_with_deadline(project, &Deadline::new(Duration::from_secs(seconds)))?;
     crate::output::json(

@@ -1,5 +1,6 @@
 mod callback;
 mod challenge;
+pub(crate) mod cleanup;
 mod command;
 mod credentials;
 mod destination;

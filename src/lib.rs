@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod call;
+pub mod cleanup;
 pub mod cli;
 pub mod config;
 pub mod deadline;
@@ -34,9 +35,13 @@ pub fn dispatch(cli: Cli) -> Result<(), Error> {
     if !cfg!(target_os = "linux") {
         return Err(Error::new(ErrorKind::Unsupported, "v1 supports Linux only"));
     }
+    if cli.uninstall_everything {
+        return cleanup::uninstall_everything(cli.yes, cli.timeout);
+    }
     match cli.command {
         Some(Command::Shape(shape)) => return shape::run(shape, cli.timeout),
         Some(Command::Install(install)) => return install::run(install, cli.timeout),
+        Some(Command::Uninstall(uninstall)) => return cleanup::run(uninstall, cli.timeout),
         Some(Command::Auth { command }) => return auth::run(command, cli.timeout),
         Some(Command::Supervisor) => return supervisor::run(),
         Some(Command::Guard(guard)) => return supervisor::guard(guard),

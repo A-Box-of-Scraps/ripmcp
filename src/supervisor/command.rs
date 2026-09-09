@@ -81,6 +81,8 @@ pub(crate) async fn request(
     if !matches!(action, Action::Stop) {
         effective.authorize(name)?.require_enabled(None)?;
     }
+    let _maintenance: crate::storage::Maintenance =
+        crate::storage::Maintenance::acquire(paths, false, operation).await?;
     if !effective.is_local(name) {
         return crate::auth::remote::execute(cwd.to_path_buf(), name, action, operation).await;
     }

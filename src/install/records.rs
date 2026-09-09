@@ -42,6 +42,7 @@ pub(crate) fn begin(
             origin: Origin::Unknown,
             ownership: Ownership::Shared,
             cleanup: CleanupState::Preserved,
+            filesystem: None,
         });
         if let Some(cwd) = cwd
             && cwd != std::path::Path::new("/")
@@ -54,6 +55,7 @@ pub(crate) fn begin(
                 origin: Origin::Unknown,
                 ownership: Ownership::Unknown,
                 cleanup: CleanupState::Preserved,
+                filesystem: None,
             });
         }
     }

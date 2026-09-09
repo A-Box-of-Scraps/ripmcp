@@ -20,6 +20,8 @@ pub(crate) async fn run(
 ) -> Result<(), Error> {
     let scope: WriteScope = (&policy.scope).into();
     let target: Server = target(policy, paths, effective)?;
+    let _maintenance: crate::storage::Maintenance =
+        crate::storage::Maintenance::acquire(paths, false, operation).await?;
     if let Some(tool) = &policy.tool {
         validate_tool(policy, &target, paths, cwd, effective, operation).await?;
         if tool.is_empty() {

@@ -11,6 +11,9 @@ pub trait SecureStore: Send + Sync {
     }
     fn read<'a>(&'a self, key: &'a str) -> StoreFuture<'a, Option<Vec<u8>>>;
     fn write<'a>(&'a self, key: &'a str, value: &'a [u8], create: bool) -> StoreFuture<'a, ()>;
+    fn remove<'a>(&'a self, _key: &'a str) -> StoreFuture<'a, ()> {
+        Box::pin(async { Err(unavailable()) })
+    }
 }
 
 pub struct SystemStore;
@@ -71,6 +74,17 @@ async fn item<'a>(collection: &'a Collection<'_>, key: &str) -> Result<Option<It
 }
 
 impl SystemStore {
+    pub(crate) async fn remove_owned(key: &str) -> Result<(), Error> {
+        let service: SecretService<'_> = service().await?;
+        let collection: Collection<'_> = collection(&service).await?;
+        if let Some(item) = item(&collection, key).await? {
+            item.delete().await.map_err(|_| unavailable())?;
+        }
+        if item(&collection, key).await?.is_some() {
+            return Err(unavailable());
+        }
+        Ok(())
+    }
     pub(crate) async fn reference(id: &str) -> Result<crate::trust::secrets::Secret, Error> {
         let service: SecretService<'_> = service().await?;
         let collection: Collection<'_> = collection(&service).await?;
@@ -99,6 +113,9 @@ impl SystemStore {
 }
 
 impl SecureStore for SystemStore {
+    fn remove<'a>(&'a self, key: &'a str) -> StoreFuture<'a, ()> {
+        Box::pin(Self::remove_owned(key))
+    }
     fn available(&self) -> StoreFuture<'_, ()> {
         Box::pin(async {
             let service: SecretService<'_> = service().await?;
@@ -128,6 +145,7 @@ impl SecureStore for SystemStore {
             }
             let service: SecretService<'_> = service().await?;
             let collection: Collection<'_> = collection(&service).await?;
+            super::cleanup::record(key).await?;
             if let Some(item) = item(&collection, key).await? {
                 return item
                     .set_secret(value, "application/json")

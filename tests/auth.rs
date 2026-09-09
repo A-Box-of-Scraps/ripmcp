@@ -56,7 +56,7 @@ fn absent_secret_service_fails_closed_without_network_or_plaintext_files() {
         assert!(output.stdout.is_empty());
         assert!(String::from_utf8_lossy(&output.stderr).contains("Secret Service"));
     }
-    assert_eq!(std::fs::read_dir(sandbox.root.path()).unwrap().count(), 1);
+    only_admission_lock(&sandbox);
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn remote_calls_preserve_tool_envelopes_without_starting_supervisor() {
         serde_json::from_slice::<Value>(&output.stdout).unwrap(),
         result
     );
-    assert_eq!(std::fs::read_dir(sandbox.root.path()).unwrap().count(), 1);
+    only_admission_lock(&sandbox);
     for method in ["server/discover", "tools/list", "tools/call"] {
         let request: String = String::from_utf8(
             server
@@ -151,6 +151,13 @@ fn remote_calls_preserve_tool_envelopes_without_starting_supervisor() {
         assert!(!request.to_ascii_lowercase().contains("authorization:"));
     }
     server.finish().unwrap();
+}
+
+fn only_admission_lock(sandbox: &Sandbox) {
+    assert_eq!(std::fs::read_dir(sandbox.root.path()).unwrap().count(), 2);
+    let state: PathBuf = sandbox.root.path().join("XDG_STATE_HOME/ripmcp");
+    assert_eq!(std::fs::read_dir(&state).unwrap().count(), 1);
+    assert_eq!(std::fs::read(state.join(".maintenance.lock")).unwrap(), b"");
 }
 
 #[test]

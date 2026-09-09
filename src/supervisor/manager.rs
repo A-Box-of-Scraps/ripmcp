@@ -1,6 +1,8 @@
 mod execute;
 mod install;
+mod self_uninstall;
 pub(crate) mod status;
+mod uninstall;
 
 use super::Barrier;
 use super::launch::Prepared;
@@ -29,6 +31,8 @@ pub struct LocalRequest {
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Action {
     Install(Box<crate::install::Request>),
+    Uninstall(crate::cleanup::Request),
+    SelfUninstall(crate::cleanup::SelfRequest),
     Start,
     Stop,
     Tools { all: bool },
@@ -71,6 +75,14 @@ impl Manager {
         request: LocalRequest,
         operation: &Operation,
     ) -> Result<Value, Error> {
+        if matches!(request.action, Action::SelfUninstall(_)) {
+            return self.self_uninstall(request, operation).await;
+        }
+        let _maintenance: crate::storage::Maintenance =
+            crate::storage::Maintenance::acquire(&self.paths, false, operation).await?;
+        if matches!(request.action, Action::Uninstall(_)) {
+            return self.uninstall(request, operation).await;
+        }
         let _barrier: OwnedRwLockReadGuard<()> = operation.run(self.barrier.enter()).await?;
         if matches!(request.action, Action::Install(_)) {
             return self.install(request, operation).await;
@@ -159,10 +171,11 @@ impl Manager {
         )?
         .ok_or_else(super::invalid)?;
         let file: std::fs::File = directory
-            .file(
+            .recorded_file(
                 &format!(".instance-{key}.lock"),
                 rustix::fs::OFlags::RDWR | rustix::fs::OFlags::CREATE,
-                true,
+                &self.paths.directory(crate::storage::Location::State)?,
+                &crate::deadline::Deadline::new(operation.remaining()?),
             )?
             .ok_or_else(super::invalid)?;
         operation.run(super::client::acquire(&file)).await?;
@@ -260,6 +273,19 @@ mod tests {
             OsString::from("HOME"),
             root.path().as_os_str().to_owned(),
         )]));
+        let setup: Operation = Operation::new(
+            Deadline::new(Duration::from_secs(1)),
+            CancellationToken::new(),
+        );
+        let _admission: crate::storage::Maintenance =
+            crate::storage::Maintenance::acquire(&paths, false, &setup)
+                .await
+                .unwrap();
+        let state: std::path::PathBuf = paths.directory(crate::storage::Location::State).unwrap();
+        let before: Vec<std::ffi::OsString> = std::fs::read_dir(&state)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
         let manager: Manager = Manager::new(paths, Barrier::default());
         let _maintenance: tokio::sync::OwnedRwLockWriteGuard<()> =
             manager.barrier.maintenance().await.unwrap();
@@ -276,6 +302,10 @@ mod tests {
         let error: Error = manager.local(request, &operation).await.unwrap_err();
         assert_eq!(error.kind, ErrorKind::Timeout);
         assert!(manager.slots.lock().await.is_empty());
-        assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 0);
+        let after: Vec<std::ffi::OsString> = std::fs::read_dir(&state)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(after, before);
     }
 }

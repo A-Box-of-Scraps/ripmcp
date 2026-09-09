@@ -60,10 +60,11 @@ async fn supervise(guard: Guard) -> Result<(), Error> {
     }
     let state: Directory = Directory::open(&guard.state, true, true)?.ok_or_else(super::invalid)?;
     let lock: File = state
-        .file(
+        .recorded_file(
             &format!(".instance-{}.lock", guard.lease),
             rustix::fs::OFlags::RDWR | rustix::fs::OFlags::CREATE,
-            true,
+            &guard.state,
+            &crate::deadline::Deadline::new(std::time::Duration::from_secs(60)),
         )?
         .ok_or_else(super::invalid)?;
     let mut term: tokio::signal::unix::Signal =

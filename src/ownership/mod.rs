@@ -1,4 +1,9 @@
+pub(crate) mod executable;
+mod filesystem;
+pub use executable::Executable;
+pub(crate) mod artifacts;
 mod model;
+pub use filesystem::Filesystem;
 pub use model::*;
 
 use crate::error::{Error, ErrorKind};
@@ -14,16 +19,17 @@ pub struct Journal {
     pub installations: BTreeMap<String, Installation>,
     #[serde(deserialize_with = "crate::config::unique::map")]
     pub operations: BTreeMap<String, Operation>,
+    #[serde(default)]
+    pub executable: Executable,
 }
 
 pub struct OwnershipStore(Store);
 impl OwnershipStore {
     pub fn new(paths: &Paths) -> Result<Self, Error> {
-        Ok(Self(Store::new(
-            paths.directory(Location::State)?,
-            "ownership.json",
-            true,
-        )?))
+        Ok(Self(
+            Store::new(paths.directory(Location::State)?, "ownership.json", true)?
+                .recording(paths)?,
+        ))
     }
     pub fn read(&self) -> Result<Journal, Error> {
         let journal: Journal = match self.0.read()? {
@@ -69,7 +75,18 @@ impl OwnershipStore {
 }
 
 impl Journal {
-    fn validate(&self) -> Result<(), Error> {
+    pub(crate) fn resources(&self) -> impl Iterator<Item = &Resource> {
+        let setup: &[Resource] = match &self.executable {
+            Executable::Standalone { setup, .. } => setup,
+            _ => &[],
+        };
+        self.installations
+            .values()
+            .flat_map(|entry| &entry.resources)
+            .chain(setup)
+    }
+    pub(crate) fn validate(&self) -> Result<(), Error> {
+        self.executable.validate()?;
         for (key, installation) in &self.installations {
             if key != installation.id().as_str() {
                 return Err(invalid());

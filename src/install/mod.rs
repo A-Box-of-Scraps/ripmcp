@@ -55,6 +55,8 @@ async fn execute(install: Install, timeout: Option<u64>) -> Result<(), Error> {
     let import_project: Option<import::Approval> =
         import::authorize(install.source.config.as_deref(), &paths)?;
     let server: crate::config::Server = input::parse(&install)?;
+    let _maintenance: crate::storage::Maintenance =
+        crate::storage::Maintenance::acquire(&paths, false, &operation).await?;
     let environment: BTreeMap<String, String> =
         crate::supervisor::installation_environment(&server);
     let request: LocalRequest = LocalRequest {

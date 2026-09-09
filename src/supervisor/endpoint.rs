@@ -17,6 +17,7 @@ const PENDING_SOCKET: &str = ".supervisor.socket.pending";
 pub(super) struct Endpoint {
     directory: Directory,
     pub context: String,
+    paths: Paths,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -45,6 +46,7 @@ impl Endpoint {
         Ok(Some(Self {
             directory,
             context: crate::config::digest(&bytes),
+            paths: paths.clone(),
         }))
     }
 
@@ -54,7 +56,12 @@ impl Endpoint {
 
     pub fn lock(&self, name: &str) -> Result<File, Error> {
         self.directory
-            .file(name, OFlags::RDWR | OFlags::CREATE, true)?
+            .recorded_file(
+                name,
+                OFlags::RDWR | OFlags::CREATE,
+                &self.paths.directory(Location::State)?,
+                &crate::deadline::Deadline::new(std::time::Duration::from_secs(60)),
+            )?
             .ok_or_else(invalid)
     }
 

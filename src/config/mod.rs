@@ -71,5 +71,5 @@ pub(crate) fn digest(bytes: &[u8]) -> String {
 }
 
 pub(crate) fn user_store(paths: &Paths) -> Result<Store, Error> {
-    Store::new(paths.directory(Location::Config)?, "config.json", false)
+    Store::new(paths.directory(Location::Config)?, "config.json", false)?.recording(paths)
 }

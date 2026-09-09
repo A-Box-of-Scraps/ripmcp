@@ -1,6 +1,8 @@
 mod directory;
+mod maintenance;
 mod paths;
 mod transaction;
+pub(crate) use maintenance::{Maintenance, acquire_file};
 
 pub use directory::Directory;
 pub use paths::{Location, Paths};

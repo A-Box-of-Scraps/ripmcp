@@ -60,6 +60,7 @@ fn installation_bookkeeping_keeps_the_process_but_a_new_installation_does_not() 
                 origin: Origin::Unknown,
                 ownership: Ownership::Exclusive,
                 cleanup: CleanupState::Pending,
+                filesystem: None,
             });
             Ok(())
         })

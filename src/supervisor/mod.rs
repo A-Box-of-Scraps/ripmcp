@@ -40,3 +40,13 @@ fn incompatible() -> Error {
 pub(crate) use command::installation_environment;
 
 pub(crate) use command::request;
+
+pub(crate) async fn offline_cleanup(
+    paths: crate::storage::Paths,
+    request: LocalRequest,
+    operation: &crate::mcp::Operation,
+) -> Result<serde_json::Value, Error> {
+    manager::Manager::new(paths, Barrier::default())
+        .local(request, operation)
+        .await
+}

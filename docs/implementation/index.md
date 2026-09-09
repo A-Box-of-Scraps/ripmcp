@@ -8,16 +8,17 @@ and shell-friendly tool invocation. This directory is the implementation tracker
 for the user and subsequent agents, not product documentation.
 
 The original baseline was an entry-point stub with no application dependencies.
-Phases 01-07 are complete: typed CLI/error/output contracts, isolated fixtures,
+Phases 01-08 are complete: typed CLI/error/output contracts, isolated fixtures,
 configuration/storage/trust and ownership foundations, the tools-focused MCP
 client, persistent local supervisor lifecycle, secure remote OAuth, staged installation transactions, persisted tool policy, cross-server discovery/shorthand
-invocation, and bounded offline shape inspection. Passive
+invocation, bounded offline shape inspection, and ownership-driven cleanup with journaled self-removal. Passive
 `servers`, interactive `trust`, local `start`/`stop`, and qualified local tool
 operations are operational.
 Local execution requires a prepared immutable installation record; installation now
 prepares local dependencies, verifies discovery without calls, retains successful
 local processes, and registers remote endpoints. Qualified remote tool operations
-and explicit auth login/status/logout are operational. Cleanup remains in phase 08.
+and explicit auth login/status/logout are operational. Ordinary/clean uninstall and
+confirmed self-removal are operational. Full-system validation remains in phase 09.
 See the phase handoffs for validation evidence and integration contracts.
 
 The user's [confirmed command list](commands.md) overrides tentative spellings in
@@ -35,7 +36,7 @@ technical choices below are not silently promoted to user-approved decisions.
 | [05](05-authentication.md) | Remote OAuth and secure credential lifecycle | 02, 03 | Done |
 | [06](06-installation.md) | Local preparation, remote registration, verification, rollback | 02, 03, 04, 05 | Done |
 | [07](07-tool-workflow.md) | Tool policy, discovery, qualified/shorthand calls, shape | 03, 04, 05, 06 | Done |
-| [08](08-cleanup.md) | Uninstall, clean uninstall, self-removal and recovery | 02, 04, 06, 07 | Not started |
+| [08](08-cleanup.md) | Uninstall, clean uninstall, self-removal and recovery | 02, 04, 06, 07 | Done |
 | [09](09-v1-validation.md) | Full-system regression, failure recovery and v1 readiness | All previous phases | Not started |
 
 Default execution order is numeric. Phase 05 can run alongside 04 after 03.

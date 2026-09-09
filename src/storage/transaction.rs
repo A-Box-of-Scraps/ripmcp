@@ -12,6 +12,7 @@ pub struct Store {
     directory: PathBuf,
     name: String,
     private: bool,
+    ledger: Option<super::Paths>,
 }
 
 pub(crate) struct LockedStore {
@@ -21,6 +22,7 @@ pub(crate) struct LockedStore {
     _lock: File,
     path: PathBuf,
     pub previous: Option<Vec<u8>>,
+    ledger: Option<super::Paths>,
 }
 
 impl LockedStore {
@@ -45,6 +47,14 @@ impl LockedStore {
     }
 
     pub fn commit(&self, bytes: &[u8], operation: &crate::mcp::Operation) -> Result<(), Error> {
+        self.commit_created(bytes, operation).map(|_| ())
+    }
+
+    pub(crate) fn commit_created(
+        &self,
+        bytes: &[u8],
+        operation: &crate::mcp::Operation,
+    ) -> Result<crate::ownership::Filesystem, Error> {
         if bytes.len() > 4 * 1024 * 1024 {
             return Err(invalid());
         }
@@ -63,7 +73,20 @@ impl LockedStore {
         file.sync_all().map_err(io_error)?;
         operation.remaining()?;
         self.unchanged()?;
-        self.directory.replace(&temporary, &self.name)
+        let filesystem: crate::ownership::Filesystem = crate::ownership::Filesystem::from_created(
+            &self.path.join(&self.name),
+            &self.path,
+            &file.metadata().map_err(io_error)?,
+            &self.directory.metadata()?,
+        )?;
+        self.directory.replace(&temporary, &self.name)?;
+        record(
+            &self.ledger,
+            &self.path.join(&self.name),
+            filesystem.clone(),
+            &Deadline::new(operation.remaining()?),
+        )?;
+        Ok(filesystem)
     }
 }
 
@@ -75,13 +98,12 @@ impl Store {
         operation.remaining()?;
         let directory: Directory =
             Directory::open(&self.directory, true, self.private)?.ok_or_else(invalid)?;
-        let lock: File = directory
-            .file(
-                &format!(".{}.lock", self.name),
-                OFlags::RDWR | OFlags::CREATE,
-                true,
-            )?
-            .ok_or_else(invalid)?;
+        let lock: File = lock_file(
+            &directory,
+            &self.name,
+            &self.ledger,
+            &Deadline::new(operation.remaining()?),
+        )?;
         operation.run(acquire_async(&lock)).await?;
         let previous: Option<Vec<u8>> = directory.read(&self.name, self.private)?;
         Ok(LockedStore {
@@ -91,6 +113,7 @@ impl Store {
             _lock: lock,
             path: self.directory.clone(),
             previous,
+            ledger: self.ledger.clone(),
         })
     }
     pub fn new(directory: PathBuf, name: &str, private: bool) -> Result<Self, Error> {
@@ -101,7 +124,13 @@ impl Store {
             directory,
             name: name.to_owned(),
             private,
+            ledger: None,
         })
+    }
+
+    pub(crate) fn recording(mut self, paths: &super::Paths) -> Result<Self, Error> {
+        self.ledger = Some(paths.clone());
+        Ok(self)
     }
 
     pub fn read(&self) -> Result<Option<Vec<u8>>, Error> {
@@ -128,10 +157,7 @@ impl Store {
         deadline.remaining()?;
         let directory: Directory =
             Directory::open(&self.directory, true, self.private)?.ok_or_else(invalid)?;
-        let lock_name: String = format!(".{}.lock", self.name);
-        let lock: File = directory
-            .file(&lock_name, OFlags::RDWR | OFlags::CREATE, true)?
-            .ok_or_else(invalid)?;
+        let lock: File = lock_file(&directory, &self.name, &self.ledger, deadline)?;
         acquire(&lock, deadline)?;
         let previous: Option<Vec<u8>> = directory.read(&self.name, self.private)?;
         let (bytes, result): (Vec<u8>, T) = change(previous.as_deref())?;
@@ -154,7 +180,19 @@ impl Store {
         file.write_all(&bytes).map_err(io_error)?;
         file.sync_all().map_err(io_error)?;
         deadline.remaining()?;
+        let filesystem: crate::ownership::Filesystem = crate::ownership::Filesystem::from_created(
+            &self.directory.join(&self.name),
+            &self.directory,
+            &file.metadata().map_err(io_error)?,
+            &directory.metadata()?,
+        )?;
         directory.replace(&temporary, &self.name)?;
+        record(
+            &self.ledger,
+            &self.directory.join(&self.name),
+            filesystem,
+            deadline,
+        )?;
         Ok(result)
     }
 
@@ -180,6 +218,42 @@ impl Store {
             Ok((bytes, result))
         })
     }
+}
+
+fn record(
+    ledger: &Option<super::Paths>,
+    path: &std::path::Path,
+    filesystem: crate::ownership::Filesystem,
+    deadline: &Deadline,
+) -> Result<(), Error> {
+    if let Some(ledger) = ledger {
+        crate::ownership::artifacts::record(
+            &ledger.directory(super::Location::State)?,
+            path,
+            filesystem,
+            deadline,
+        )?;
+    }
+    Ok(())
+}
+
+fn lock_file(
+    directory: &Directory,
+    name: &str,
+    ledger: &Option<super::Paths>,
+    deadline: &Deadline,
+) -> Result<File, Error> {
+    let name: String = format!(".{name}.lock");
+    let file: Option<File> = match ledger {
+        Some(paths) => directory.recorded_file(
+            &name,
+            OFlags::RDWR | OFlags::CREATE,
+            &paths.directory(super::Location::State)?,
+            deadline,
+        )?,
+        None => directory.file(&name, OFlags::RDWR | OFlags::CREATE, true)?,
+    };
+    file.ok_or_else(invalid)
 }
 
 fn acquire(file: &File, deadline: &Deadline) -> Result<(), Error> {

@@ -56,6 +56,7 @@ impl Target {
             ),
         };
         let locked: LockedStore = Store::new(directory, "config.json", private)?
+            .recording(paths)?
             .lock(operation)
             .await?;
         let mut configuration: Configuration = locked

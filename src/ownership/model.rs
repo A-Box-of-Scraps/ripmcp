@@ -100,6 +100,9 @@ impl Installation {
         .validate()?;
         for resource in &self.resources {
             resource.identity.validate()?;
+            if let Some(filesystem) = &resource.filesystem {
+                filesystem.validate(&resource.identity)?;
+            }
         }
         for reference in &self.retained_data {
             reference.validate()?;
@@ -193,7 +196,7 @@ impl ResourceIdentity {
         }
     }
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Resource {
     pub kind: ResourceKind,
@@ -201,6 +204,8 @@ pub struct Resource {
     pub origin: Origin,
     pub ownership: Ownership,
     pub cleanup: CleanupState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filesystem: Option<super::Filesystem>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
