@@ -152,9 +152,54 @@ pub struct Shape {
 
 #[derive(Subcommand)]
 pub enum Auth {
+    Configure(Box<AuthConfigure>),
     Login(Server),
     Status(Server),
     Logout(Server),
+}
+
+#[derive(Args)]
+pub struct AuthConfigure {
+    pub server: String,
+    #[command(flatten)]
+    pub source: AuthSource,
+    #[command(flatten)]
+    pub scope: Scope,
+    #[arg(long, requires = "header")]
+    pub header_env: Option<String>,
+    #[arg(long, requires = "oauth_client_id")]
+    pub issuer: Option<String>,
+    #[arg(
+        long,
+        requires = "oauth_client_id",
+        conflicts_with = "client_secret_env"
+    )]
+    pub client_secret: bool,
+    #[arg(long, requires = "oauth_client_id")]
+    pub client_secret_env: Option<String>,
+    #[arg(long, requires = "oauth_client_id")]
+    pub token_endpoint_auth_method: Option<crate::config::authentication::ClientAuthMethod>,
+    #[arg(long = "scope", requires = "oauth_client_id")]
+    pub scopes: Vec<String>,
+}
+
+#[derive(Args)]
+#[group(id = "auth_source", required = true, multiple = false)]
+pub struct AuthSource {
+    #[arg(long, help = "Prompt for a bearer token and save it in secure storage")]
+    pub bearer: bool,
+    #[arg(
+        long,
+        help = "Read a raw bearer token from this environment variable at invocation"
+    )]
+    pub bearer_env: Option<String>,
+    #[arg(
+        long,
+        help = "Configure a custom credential header; prompt unless --header-env is given"
+    )]
+    pub header: Option<String>,
+    #[arg(long, requires = "issuer")]
+    pub oauth_client_id: Option<String>,
 }
 
 impl Cli {
@@ -165,7 +210,7 @@ impl Cli {
     pub fn timeout_with(&self, timeouts: &crate::deadline::Timeouts) -> std::time::Duration {
         let default_seconds = match &self.command {
             Some(Command::Auth {
-                command: Auth::Login(_),
+                command: Auth::Login(_) | Auth::Configure(_),
             }) => timeouts.login_seconds.get(),
             _ => timeouts.operation_seconds.get(),
         };

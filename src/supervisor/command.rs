@@ -1,6 +1,6 @@
 use super::{Action, Connection, LocalRequest};
 use crate::cli::Command;
-use crate::config::{AuthorizedServer, Definition, Effective, schema::SecretReference};
+use crate::config::{AuthorizedServer, Effective, schema::SecretReference};
 use crate::deadline::Deadline;
 use crate::error::{Error, ErrorKind};
 use crate::mcp::{Operation, SignalCancellation};
@@ -191,17 +191,11 @@ pub(crate) fn installation_environment(server: &crate::config::Server) -> BTreeM
                 .map(|value| ((*key).to_owned(), value))
         })
         .collect();
-    let env: &BTreeMap<String, SecretReference> = match &server.definition {
-        Definition::Local { env, .. } => env,
-        Definition::Remote { headers, .. } => headers,
-    };
-    {
-        for reference in env.values() {
-            if let SecretReference::Environment(name) = reference
-                && let Ok(value) = std::env::var(name)
-            {
-                values.insert(name.clone(), value);
-            }
+    for reference in server.definition.references() {
+        if let SecretReference::Environment(name) = reference
+            && let Ok(value) = std::env::var(name)
+        {
+            values.insert(name.clone(), value);
         }
     }
     values

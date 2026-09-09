@@ -78,6 +78,7 @@ impl Record {
 pub(super) struct Vault {
     pub store: Arc<dyn SecureStore>,
     locks: PathBuf,
+    pub partition: Option<String>,
 }
 
 impl Vault {
@@ -85,23 +86,37 @@ impl Vault {
         Self {
             store,
             locks: PathBuf::from("/tmp"),
+            partition: None,
         }
     }
 
     #[cfg(test)]
     pub fn isolated(store: Arc<dyn SecureStore>, locks: PathBuf) -> Self {
-        Self { store, locks }
+        Self {
+            store,
+            locks,
+            partition: None,
+        }
     }
 
     pub fn key(endpoint: &Url) -> String {
         crate::config::digest(endpoint.as_str().as_bytes())
     }
 
+    fn bound_key(&self, endpoint: &Url) -> String {
+        match &self.partition {
+            None => Self::key(endpoint),
+            Some(partition) => {
+                crate::config::digest(format!("{}\n{}", endpoint.as_str(), partition).as_bytes())
+            }
+        }
+    }
+
     fn epoch(&self, endpoint: &Url) -> Result<Store, Error> {
         Store::new(
             self.locks
                 .join(format!("ripmcp-{}", rustix::process::geteuid().as_raw())),
-            &format!("oauth-{}.epoch", Self::key(endpoint)),
+            &format!("oauth-{}.epoch", self.bound_key(endpoint)),
             true,
         )
     }
@@ -130,7 +145,7 @@ impl Vault {
         .ok_or_else(invalid)?;
         let file: File = directory
             .file(
-                &format!(".oauth-{}.lock", Self::key(endpoint)),
+                &format!(".oauth-{}.lock", self.bound_key(endpoint)),
                 OFlags::RDWR | OFlags::CREATE,
                 true,
             )?
@@ -160,7 +175,7 @@ impl Vault {
         endpoint: &Url,
         operation: &Operation,
     ) -> Result<Option<Record>, Error> {
-        let key: String = Self::key(endpoint);
+        let key: String = self.bound_key(endpoint);
         let Some(bytes): Option<Vec<u8>> = operation.run(self.store.read(&key)).await? else {
             return Ok(None);
         };
@@ -188,7 +203,7 @@ impl Vault {
         create: bool,
         operation: &Operation,
     ) -> Result<(), Error> {
-        let key: String = Self::key(endpoint);
+        let key: String = self.bound_key(endpoint);
         let bytes: Vec<u8> = serde_json::to_vec(record).map_err(|_| invalid())?;
         // A cancelled D-Bus write can still finish. An independent epoch keeps it revoked.
         self.set_epoch(endpoint, &random()?, operation)?;

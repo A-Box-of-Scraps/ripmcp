@@ -193,3 +193,10 @@ GUI/agent loop, registry browsing, automatic updates, idle shutdown, general
 package management, project-config deletion, a custom JSON query language,
 implicit tool-call retries, result-cache lifecycle, and non-tools MCP features
 unless required by the explicitly approved protocol profile.
+
+## Generic authentication extension
+
+[Generic authentication](10-generic-authentication.md) documents secure bearer
+setup, environment references, custom credential headers, and user-supplied OAuth
+client registration. It extends phase 05 without requiring provider-specific apps
+owned by ripmcp and explicitly lists unsupported flows.

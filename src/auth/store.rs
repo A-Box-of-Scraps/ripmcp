@@ -74,6 +74,22 @@ async fn item<'a>(collection: &'a Collection<'_>, key: &str) -> Result<Option<It
 }
 
 impl SystemStore {
+    pub(crate) async fn stored_reference(id: &str) -> Result<crate::trust::secrets::Secret, Error> {
+        if !crate::config::authentication::stored_key(id) {
+            return Err(invalid());
+        }
+        let bytes: Vec<u8> = Self.read(id).await?.ok_or_else(|| {
+            Error::new(
+                ErrorKind::Authentication,
+                "stored credential is unavailable; run ripmcp auth configure <server>",
+            )
+        })?;
+        let value: String = serde_json::from_slice(&bytes).map_err(|_| invalid())?;
+        if value.is_empty() || value.len() > 16384 || value.chars().any(char::is_control) {
+            return Err(invalid());
+        }
+        Ok(crate::trust::secrets::Secret::new(value))
+    }
     pub(crate) async fn remove_owned(key: &str) -> Result<(), Error> {
         let service: SecretService<'_> = service().await?;
         let collection: Collection<'_> = collection(&service).await?;
@@ -157,7 +173,7 @@ impl SecureStore for SystemStore {
             }
             collection
                 .create_item(
-                    "ripmcp OAuth credentials",
+                    "ripmcp credentials",
                     attributes(key),
                     value,
                     false,

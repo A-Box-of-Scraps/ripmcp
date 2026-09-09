@@ -35,6 +35,10 @@ impl Network {
         previous: Option<&Credential>,
         operation: &Operation,
     ) -> Result<String, Error> {
+        if let Some(registration) = &self.registration {
+            registration.check_issuer(&profile.authorization.issuer)?;
+            return Ok(registration.configuration.client_id.clone());
+        }
         if profile.authorization.client_id_metadata_document_supported == Some(true) {
             return Ok(CLIENT_ID.to_owned());
         }
@@ -79,8 +83,14 @@ impl Network {
         operation: &Operation,
     ) -> Result<Credential, Error> {
         let endpoint: Url = self.url(&profile.authorization.token_endpoint)?;
-        let response: reqwest::Response =
-            network::send(self.post(&endpoint, fields)?, operation).await?;
+        let request: reqwest::RequestBuilder = match &self.registration {
+            Some(registration) => {
+                registration.check_issuer(&profile.authorization.issuer)?;
+                registration.request(self, &endpoint, fields)?
+            }
+            None => self.post(&endpoint, fields)?,
+        };
+        let response: reqwest::Response = network::send(request, operation).await?;
         if !response.status().is_success() {
             return Err(required());
         }

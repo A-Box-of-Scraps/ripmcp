@@ -1,5 +1,6 @@
 use crate::config::{AuthorizedServer, Definition, schema::SecretReference};
 use crate::error::{Error, ErrorKind};
+use crate::mcp::Operation;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -21,6 +22,9 @@ impl fmt::Debug for Secret {
 pub trait SecretBackend {
     fn environment(&self, name: &str) -> Result<Secret, Error>;
     fn keyring(&self, id: &str) -> Result<Secret, Error>;
+    fn stored_async<'a>(&'a self, id: &'a str) -> crate::auth::StoreFuture<'a, Secret> {
+        Box::pin(crate::auth::SystemStore::stored_reference(id))
+    }
     fn keyring_async<'a>(&'a self, id: &'a str) -> crate::auth::StoreFuture<'a, Secret>
     where
         Self: Sync,
@@ -67,6 +71,7 @@ impl AuthorizedServer<'_> {
             let value: Secret = match reference {
                 SecretReference::Environment(name) => backend.environment(name)?,
                 SecretReference::Keyring(id) => operation.run(backend.keyring_async(id)).await?,
+                SecretReference::Stored(id) => operation.run(backend.stored_async(id)).await?,
             };
             validate(&value, &self.server().definition)?;
             values.insert(name.clone(), value);
@@ -89,6 +94,12 @@ impl AuthorizedServer<'_> {
                 let value: Secret = match reference {
                     SecretReference::Environment(name) => backend.environment(name)?,
                     SecretReference::Keyring(id) => backend.keyring(id)?,
+                    SecretReference::Stored(_) => {
+                        return Err(Error::new(
+                            ErrorKind::Unsupported,
+                            "stored credentials require asynchronous resolution",
+                        ));
+                    }
                 };
                 validate(&value, &self.server().definition)?;
                 Ok((name.clone(), value))
@@ -108,4 +119,18 @@ fn validate(value: &Secret, definition: &Definition) -> Result<(), Error> {
         ));
     }
     Ok(())
+}
+
+impl SecretReference {
+    pub(crate) async fn resolve(
+        &self,
+        backend: &(impl SecretBackend + Sync),
+        operation: &Operation,
+    ) -> Result<Secret, Error> {
+        match self {
+            Self::Environment(name) => backend.environment(name),
+            Self::Keyring(id) => operation.run(backend.keyring_async(id)).await,
+            Self::Stored(id) => operation.run(backend.stored_async(id)).await,
+        }
+    }
 }

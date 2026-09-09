@@ -1,5 +1,6 @@
 mod lifecycle;
 mod metadata;
+mod registration;
 pub(super) mod support;
 
 use super::{

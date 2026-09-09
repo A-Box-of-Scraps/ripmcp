@@ -1,12 +1,16 @@
+mod bearer;
 mod callback;
 mod challenge;
 pub(crate) mod cleanup;
 mod command;
+mod configure;
 mod credentials;
 mod destination;
 mod metadata;
 mod network;
+mod prompt;
 mod provider;
+mod registration;
 pub(crate) mod remote;
 mod store;
 mod token;
@@ -41,7 +45,7 @@ fn required() -> Error {
 fn unsupported() -> Error {
     Error::new(
         ErrorKind::Unsupported,
-        "OAuth provider must support metadata discovery, S256 PKCE, and client metadata documents or native public DCR; pre-registration-only providers are unsupported",
+        "OAuth provider lacks a supported registration or authorization method; configure your own OAuth client with auth configure --oauth-client-id, or use --bearer / --bearer-env",
     )
 }
 

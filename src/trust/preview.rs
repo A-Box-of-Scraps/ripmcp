@@ -40,7 +40,28 @@ enum Execution<'a> {
         endpoint_digest: String,
         header_names: Vec<&'a str>,
         authentication: Authentication,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        oauth_registration: Option<OAuthPreview>,
     },
+}
+
+#[derive(Serialize)]
+struct OAuthPreview {
+    issuer_origin: String,
+    issuer_digest: String,
+    token_endpoint_auth_method: crate::config::authentication::ClientAuthMethod,
+    scope_count: usize,
+}
+
+impl OAuthPreview {
+    fn new(client: &crate::config::authentication::OAuthClient) -> Result<Self, Error> {
+        Ok(Self {
+            issuer_origin: endpoint(&client.issuer)?.origin().ascii_serialization(),
+            issuer_digest: crate::config::digest(client.issuer.as_bytes()),
+            token_endpoint_auth_method: client.token_endpoint_auth_method,
+            scope_count: client.scopes.len(),
+        })
+    }
 }
 
 impl<'a> Preview<'a> {
@@ -66,12 +87,14 @@ impl<'a> Preview<'a> {
                     url,
                     headers,
                     authentication,
+                    oauth_client,
                     ..
                 } => Execution::Remote {
                     origin: endpoint(url)?.origin().ascii_serialization(),
                     endpoint_digest: crate::config::digest(url.as_bytes()),
                     header_names: headers.keys().map(String::as_str).collect(),
                     authentication: *authentication,
+                    oauth_registration: oauth_client.as_ref().map(OAuthPreview::new).transpose()?,
                 },
             };
             servers.insert(

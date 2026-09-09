@@ -13,3 +13,4 @@
 - Phase 07: Persisted server/tool enablement, cross-server discovery, qualified and unique-name calls with inline/file/stdin JSON input, and bounded offline JSON shape inspection.
 - Phase 08: Ordinary uninstall, confirmed ownership-based cleanup, journaled recovery, and self-removal that preserves project configuration and shared or externally owned resources.
 - Opt-in interactive tool calls with URL elicitation, immediate login instructions, bounded continuation, and cancellation.
+- Generic remote credential setup: secure bearer tokens, environment references, custom headers, and issuer-bound user-supplied OAuth client registration.

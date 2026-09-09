@@ -1,3 +1,4 @@
+pub mod authentication;
 mod effective;
 mod mutation;
 pub mod schema;

@@ -45,7 +45,12 @@ pub fn run(command: Auth, timeout: Option<u64>) -> Result<(), Error> {
         .enable_all()
         .build()
         .map_err(crate::storage::io_error)?;
-    runtime.block_on(execute(command, timeout))
+    runtime.block_on(async {
+        match command {
+            Auth::Configure(configure) => super::configure::execute(*configure, timeout).await,
+            command => execute(command, timeout).await,
+        }
+    })
 }
 
 async fn execute(command: Auth, timeout: Option<u64>) -> Result<(), Error> {
@@ -56,9 +61,23 @@ async fn execute(command: Auth, timeout: Option<u64>) -> Result<(), Error> {
     let effective: Effective = Effective::load(&paths, &cwd)?;
     let name: &str = match &command {
         Auth::Login(server) | Auth::Status(server) | Auth::Logout(server) => &server.server,
+        Auth::Configure(_) => return Err(super::invalid()),
     };
     let server: AuthorizedServer<'_> = effective.authorize(name)?;
-    let endpoint: Url = endpoint(&server)?;
+    let bearer: Option<&crate::config::schema::SecretReference> = match &server.server().definition
+    {
+        Definition::Remote {
+            authentication: Authentication::Bearer,
+            bearer,
+            ..
+        } => bearer.as_ref(),
+        _ => None,
+    };
+    let endpoint: Option<Url> = if bearer.is_some() {
+        None
+    } else {
+        Some(endpoint(&server)?)
+    };
     let login = matches!(command, Auth::Login(_));
     if login {
         server.require_enabled(None)?;
@@ -74,9 +93,49 @@ async fn execute(command: Auth, timeout: Option<u64>) -> Result<(), Error> {
         ),
         signal.token(),
     );
-    let provider: Provider = Provider::new(endpoint)?;
+    if let Some(reference) = bearer {
+        let _maintenance: crate::storage::Maintenance =
+            crate::storage::Maintenance::acquire(&paths, false, &operation).await?;
+        recheck(&paths, &cwd, server.identity())?;
+        return super::bearer::execute(&command, name, reference, &operation).await;
+    }
+    oauth(
+        command,
+        &server,
+        endpoint.ok_or_else(super::invalid)?,
+        &paths,
+        &cwd,
+        &operation,
+    )
+    .await
+}
+
+async fn oauth(
+    command: Auth,
+    server: &AuthorizedServer<'_>,
+    endpoint: Url,
+    paths: &Paths,
+    cwd: &std::path::Path,
+    operation: &Operation,
+) -> Result<(), Error> {
+    let client: Option<&crate::config::authentication::OAuthClient> =
+        match &server.server().definition {
+            Definition::Remote { oauth_client, .. } => oauth_client.as_ref(),
+            _ => None,
+        };
+    let provider: Provider = if matches!(command, Auth::Login(_)) {
+        super::registration::provider(
+            endpoint,
+            client,
+            &crate::trust::secrets::EnvironmentOnly,
+            operation,
+        )
+        .await?
+    } else {
+        super::registration::configured(endpoint, client)?
+    };
     let _maintenance: crate::storage::Maintenance =
-        crate::storage::Maintenance::acquire(&paths, false, &operation).await?;
+        crate::storage::Maintenance::acquire(paths, false, operation).await?;
     let identity: Identity = server.identity().clone();
     let state: &str = match command {
         Auth::Login(_) => {
@@ -84,21 +143,19 @@ async fn execute(command: Auth, timeout: Option<u64>) -> Result<(), Error> {
                 "Preparing explicit OAuth login; secure storage and provider support are required. Press Ctrl-C to cancel."
             );
             provider
-                .login(
-                    &SystemBrowser,
-                    || recheck(&paths, &cwd, &identity),
-                    &operation,
-                )
+                .login(&SystemBrowser, || recheck(paths, cwd, &identity), operation)
                 .await?;
             "saved"
         }
-        Auth::Status(_) => provider.status(&operation).await?,
+        Auth::Status(_) => provider.status(operation).await?,
         Auth::Logout(_) => {
-            provider.logout(&operation).await?;
+            provider.logout(operation).await?;
             "signed_out"
         }
+        Auth::Configure(_) => return Err(super::invalid()),
     };
-    let value: Report<'_> = report(&identity.name, state);
+    let mut value: Report<'_> = report(&identity.name, state);
+    value.auth.shared_by_endpoint = client.is_none();
     crate::output::json(&mut std::io::stdout().lock(), &value)
 }
 
@@ -123,7 +180,7 @@ fn endpoint(server: &AuthorizedServer<'_>) -> Result<Url, Error> {
         }
         _ => Err(Error::new(
             ErrorKind::Unsupported,
-            "auth commands require a remote server configured with OAuth; stdio credentials are separate",
+            "auth commands require a remote server configured with OAuth or bearer authentication; stdio credentials are separate",
         )),
     }
 }

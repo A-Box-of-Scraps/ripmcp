@@ -61,8 +61,16 @@ impl Network {
         }
         // Selection is deterministic; failures never switch to another issuer.
         let issuer: &str = &resource.authorization_servers[0];
+        if let Some(registration) = &self.registration {
+            registration.check_issuer(issuer)?;
+        }
         let authorization: Authorization = self.authorization_metadata(issuer, operation).await?;
-        let scope: Option<String> = challenge.scope.or_else(|| {
+        let configured_scope: Option<String> = self
+            .registration
+            .as_ref()
+            .filter(|registration| !registration.configuration.scopes.is_empty())
+            .map(|registration| registration.configuration.scopes.join(" "));
+        let scope: Option<String> = challenge.scope.or(configured_scope).or_else(|| {
             resource
                 .scopes_supported
                 .filter(|scopes| !scopes.is_empty())
@@ -148,6 +156,9 @@ impl Network {
     }
 
     fn validate_authorization(&self, metadata: &Authorization) -> Result<(), Error> {
+        let method: &str = self.registration.as_ref().map_or("none", |registration| {
+            registration.configuration.token_endpoint_auth_method.name()
+        });
         self.url(&metadata.authorization_endpoint)?;
         self.url(&metadata.token_endpoint)?;
         if !metadata
@@ -165,7 +176,7 @@ impl Network {
             || metadata
                 .token_endpoint_auth_methods_supported
                 .as_ref()
-                .is_some_and(|values| !values.iter().any(|value| value == "none"))
+                .is_some_and(|values| !values.iter().any(|value| value == method))
         {
             return Err(unsupported());
         }

@@ -15,7 +15,8 @@ below are not approvals of an unverified implementation.
   `src/deadline.rs::Timeouts` is the executable schema for this section.
 - Select user settings, then replace the entire timeout section if a trusted
   selected project supplies one. Untrusted settings cannot affect deadlines.
-  Explicit CLI `--timeout` overrides both. Login uses `login_seconds`; other
+  Explicit CLI `--timeout` overrides both. Login and `auth configure` use
+  `login_seconds`; other
   bounded operations use `operation_seconds`. No server-specific timeout in v1.
 - Establish one monotonic deadline per operation, not per request/page/retry.
   Queueing, preparation, connection, discovery and invocation consume that same
@@ -465,3 +466,13 @@ Completed September 8, 2026. See 07-tool-workflow.md for regression evidence.
 - Shape uses the explicit timeout or a standalone 60-second default, not configured
   settings. Streaming reads observe timeout/SIGINT. Synchronous parsing/regular-file
   reads cannot be preempted; the deadline is checked before output.
+
+## Generic credential configuration extension
+
+The phase 05 registration restriction is extended by
+[generic authentication](10-generic-authentication.md). Remote definitions may
+select bearer authentication or supply an issuer-bound OAuth client registration.
+`auth configure` publishes only environment/keyring references after validation;
+interactive values are stored in Secret Service, not configuration files.
+User-supplied registration does not disable metadata validation, PKCE, secure
+transport, credential binding, or the no-automatic-replay rule.

@@ -62,6 +62,9 @@ impl Provider {
     ) -> Result<(), Error> {
         let record: Record = self.begin(operation).await?;
         let mut profile: Profile = self.network.discover(&self.endpoint, operation).await?;
+        if let Some(registration) = &self.network.registration {
+            registration.add_scopes(&mut profile)?;
+        }
         profile.add_scope(record.pending_scope.as_deref())?;
         if let Some(previous) = &record.credential
             && previous.issuer == profile.authorization.issuer
@@ -176,6 +179,9 @@ impl Provider {
         let credential: Credential = record.credential.ok_or_else(required)?;
         let profile: Profile = self.network.discover(&self.endpoint, operation).await?;
         credential.validate(&self.endpoint, &profile)?;
+        if let Some(registration) = &self.network.registration {
+            registration.check_credential(&credential)?;
+        }
         if !credential.expired()? {
             return Ok(credential);
         }

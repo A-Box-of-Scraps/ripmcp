@@ -37,6 +37,10 @@ ripmcp call <server> <tool> '<json>' --interactive --timeout 180
 ripmcp shape <file>                        # Inspect saved JSON structure without invoking anything
 
 ripmcp auth login <server>                 # Wait for browser login to complete
+ripmcp auth configure <server> --bearer    # Prompt for and securely store a raw bearer token
+ripmcp auth configure <server> --bearer-env <name>
+ripmcp auth configure <server> --header <name> [--header-env <variable>]
+ripmcp auth configure <server> --oauth-client-id <id> --issuer <url>
 ripmcp auth status <server>                # Show authentication status
 ripmcp auth logout <server>                # Remove locally saved credentials
 
@@ -62,7 +66,8 @@ ripmcp install <server> --config <file>
   require `--` and cannot accompany `--config`. `--skip-verify` applies to all sources.
 - `install`, `uninstall`, `enable`, and `disable` accept mutually exclusive
   `--user` / `--project`; omission means user scope. Neither flag applies to
-  `trust`, lifecycle, discovery, invocation, shape, authentication or self-removal.
+  `trust`, lifecycle, discovery, invocation, shape, OAuth login/status/logout or
+  self-removal. `auth configure` also accepts these scope flags.
 - `trust` always targets the discovered current project. No path argument, `-y`,
   or implicit project creation is provided. Confirmation behavior is in contracts.md.
 - Without `--input`, `call` takes exactly `tool JSON` or `server tool JSON`.
@@ -74,6 +79,11 @@ ripmcp install <server> --config <file>
   `--width` defaults to 100, range 1-10000. Inspection never invokes tools.
 - Global `--timeout <seconds>` accepts a positive integer before or after a
   subcommand. See contracts.md for configuration and deadline semantics.
+- `auth configure` supports user/project scope and offline credential setup.
+  OAuth options include `--client-secret`, `--client-secret-env`, repeated
+  `--scope`, and `--token-endpoint-auth-method`. See
+  [generic authentication](10-generic-authentication.md) for exact semantics,
+  storage ownership, examples, and compatibility limits.
 - `call --interactive` opts into URL elicitation for server-managed login or
   other external user interaction. Validated URLs and instructions are printed
   immediately to stderr; the user opens the URL manually. The command continues

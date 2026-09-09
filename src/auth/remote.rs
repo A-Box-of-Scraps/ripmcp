@@ -72,7 +72,10 @@ impl AuthenticationProvider for Configured {
                         )
                         .await
                 }
-                None => Err(super::required()),
+                None => Err(Error::new(
+                    ErrorKind::Authentication,
+                    "remote credentials were rejected or are missing; use ripmcp auth configure <server> and check token permissions",
+                )),
             }
         })
     }
@@ -141,6 +144,8 @@ async fn configured_options(
     let Definition::Remote {
         url,
         authentication,
+        bearer,
+        oauth_client,
         ..
     }: &Definition = &server.server().definition
     else {
@@ -165,9 +170,21 @@ async fn configured_options(
             return Err(super::invalid());
         }
     }
+    if let Some(reference) = bearer {
+        let secret: Secret = reference.resolve(backend, operation).await?;
+        authorization = Some(super::bearer::header(secret.expose())?);
+    }
     let provider: Option<Provider> = match authentication {
-        Authentication::None => None,
-        Authentication::Oauth if authorization.is_none() => Some(Provider::new(endpoint.clone())?),
+        Authentication::None | Authentication::Bearer => None,
+        Authentication::Oauth if authorization.is_none() => Some(
+            super::registration::provider(
+                endpoint.clone(),
+                oauth_client.as_ref(),
+                backend,
+                operation,
+            )
+            .await?,
+        ),
         _ => {
             return Err(Error::new(
                 ErrorKind::Configuration,

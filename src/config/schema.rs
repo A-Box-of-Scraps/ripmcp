@@ -84,6 +84,10 @@ pub enum Definition {
         headers: BTreeMap<String, SecretReference>,
         #[serde(default)]
         authentication: Authentication,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        bearer: Option<SecretReference>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        oauth_client: Option<super::authentication::OAuthClient>,
     },
 }
 
@@ -110,6 +114,7 @@ pub enum Authentication {
     #[default]
     None,
     Oauth,
+    Bearer,
 }
 
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -117,6 +122,7 @@ pub enum Authentication {
 pub enum SecretReference {
     Environment(String),
     Keyring(String),
+    Stored(String),
 }
 
 #[derive(Deserialize, Serialize)]
@@ -124,6 +130,7 @@ pub enum SecretReference {
 enum ReferenceWire {
     Environment { env: String },
     Keyring { keyring: String },
+    Stored { stored: String },
 }
 
 impl TryFrom<ReferenceWire> for SecretReference {
@@ -136,6 +143,9 @@ impl TryFrom<ReferenceWire> for SecretReference {
             ReferenceWire::Keyring { keyring } if opaque_key(&keyring) => {
                 Ok(Self::Keyring(keyring))
             }
+            ReferenceWire::Stored { stored } if super::authentication::stored_key(&stored) => {
+                Ok(Self::Stored(stored))
+            }
             _ => Err("invalid secret reference"),
         }
     }
@@ -145,6 +155,7 @@ impl From<SecretReference> for ReferenceWire {
         match value {
             SecretReference::Environment(env) => Self::Environment { env },
             SecretReference::Keyring(keyring) => Self::Keyring { keyring },
+            SecretReference::Stored(stored) => Self::Stored { stored },
         }
     }
 }
@@ -197,6 +208,7 @@ impl Configuration {
 impl Definition {
     pub fn validate(&self) -> Result<(), Error> {
         self.validate_references()?;
+        super::authentication::validate(self)?;
         match self {
             Self::Local {
                 package,
@@ -244,6 +256,7 @@ impl Definition {
             let valid = match reference {
                 SecretReference::Environment(name) => environment_name(name),
                 SecretReference::Keyring(id) => opaque_key(id),
+                SecretReference::Stored(id) => super::authentication::stored_key(id),
             };
             if !valid {
                 return Err(Error::field("servers.definition.secret_reference"));

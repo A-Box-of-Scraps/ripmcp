@@ -172,7 +172,7 @@ fn noninteractive_authentication_failures_never_launch_browser() {
     assert_eq!(output.status.code(), Some(6));
     assert!(output.stdout.is_empty());
     let stderr: String = String::from_utf8(output.stderr).unwrap();
-    assert!(stderr.contains("auth login"));
+    assert!(stderr.contains("auth configure"));
     assert!(!stderr.contains("Open this URL"));
     server.finish().unwrap();
 }

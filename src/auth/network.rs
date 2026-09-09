@@ -10,6 +10,7 @@ pub(super) const BODY_LIMIT: usize = 256 * 1024;
 
 pub(super) struct Network {
     client: Client,
+    pub registration: Option<super::registration::Registration>,
     #[cfg(test)]
     pub loopback: bool,
 }
@@ -17,6 +18,7 @@ pub(super) struct Network {
 impl Network {
     pub fn new() -> Result<Self, Error> {
         Ok(Self {
+            registration: None,
             client: Client::builder()
                 .redirect(reqwest::redirect::Policy::none())
                 .retry(reqwest::retry::never())

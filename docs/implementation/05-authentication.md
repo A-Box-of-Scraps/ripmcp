@@ -223,3 +223,12 @@ unsupported plan. The user made it public, and commit `5b518ca` published only
 `34280164525` passed; HTTPS returned 200, application/json, no redirect and exact
 source bytes with matching client_id. HTTPS enforcement was enabled. Source
 changes were initially staged only; the user subsequently authorized commit/push.
+
+## Generic authentication extension
+
+The original native-public-registration-only scope is superseded by
+[generic authentication](10-generic-authentication.md) for explicitly configured
+clients. Public, Basic, and Post token-endpoint authentication are now supported
+with pinned issuers and isolated credential caches. Bearer and custom-header
+setup use secret references. Device flow and provider-specific authentication
+extensions remain unsupported by ripmcp's remote OAuth client.

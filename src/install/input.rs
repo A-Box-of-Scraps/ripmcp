@@ -85,7 +85,7 @@ fn validate_remote(definition: &Definition) -> Result<(), Error> {
     let endpoint: url::Url = crate::config::schema::endpoint(url)?;
     crate::mcp::validate_http_endpoint(&endpoint)?;
     if (!headers.is_empty()
-        || matches!(authentication, crate::config::schema::Authentication::Oauth))
+        || !matches!(authentication, crate::config::schema::Authentication::None))
         && endpoint.scheme() != "https"
     {
         return Err(super::invalid());
@@ -103,7 +103,7 @@ fn validate_remote(definition: &Definition) -> Result<(), Error> {
             return Err(super::invalid());
         }
         if name == "authorization"
-            && matches!(authentication, crate::config::schema::Authentication::Oauth)
+            && !matches!(authentication, crate::config::schema::Authentication::None)
         {
             return Err(super::invalid());
         }
