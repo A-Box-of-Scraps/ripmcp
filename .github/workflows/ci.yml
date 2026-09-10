@@ -16,16 +16,14 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
+  fast-checks:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang lld
       - name: Install Rust
-        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy && rustup default stable
+        run: rustup toolchain install stable --profile minimal --component rustfmt && rustup default stable
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Install cargo-binstall
@@ -42,8 +40,50 @@ jobs:
         run: cargo binstall --no-confirm --locked jscpd@5.0.14
       - name: Check code duplication
         run: jscpd .
+
+  stable-checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       - name: Lint
         run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --locked
+
+  custom-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Install lint toolchain
+        working-directory: lints/explicit-local-types
+        run: rustup show
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          workspaces: |
+            . -> target
+            lints/explicit-local-types -> target
+          cache-workspace-crates: true
+          cache-directories: ~/.dylint_drivers
+          key: dylint-6.0.4
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624
+        with:
+          version: "1.23.0"
       - name: Install Dylint
         run: cargo binstall --no-confirm --locked cargo-dylint@6.0.4 dylint-link@6.0.4
       - name: Check explicit local types
@@ -53,7 +93,31 @@ jobs:
         run: |
           cargo fmt --all -- --check
           cargo test --locked
-      - name: Test
-        run: cargo test --locked
+
+  release-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       - name: Build
         run: cargo build --locked --release
+
+  check:
+    if: ${{ always() }}
+    needs: [fast-checks, stable-checks, custom-lint, release-build]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all checks to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success || exit 1
+          done
