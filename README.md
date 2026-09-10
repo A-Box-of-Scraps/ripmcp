@@ -3,7 +3,7 @@
 ripmcp is a CLI for managing and invoking MCP servers, minus the bloated ceremony.
 It brings the power of MCP to AI agent harnesses built on the idea that Bash Is All You Need.
 
-# Introduction
+## Introduction
 
 ripmcp brings the Model Context Protocol (MCP) to the command line. It manages local
 and remote servers, discovers their tools, shows input schemas, and invokes tools
@@ -25,6 +25,8 @@ ripmcp handles the MCP-specific work behind those commands: server installation,
 authentication, project-scoped configuration and trust, and tool enable/disable
 controls. Local servers can stay running and be reused across CLI invocations.
 Bash is the interface; ripmcp manages the connections and server lifecycle.
+
+### Available commands and options
 
 <details>
 <summary>Explore all commands and options</summary>
@@ -103,10 +105,10 @@ ripmcp --uninstall-everything -y  # Same self-removal without prompting
 
 </details>
 
-# Documentation
+## Documentation
 
 Start [HERE](docs/README.md)!
 
-# License
+## License
 
 Licensed under the [MIT License](LICENSE) by Titouan Réthoré.
