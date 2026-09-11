@@ -12,11 +12,14 @@ Here is an overview of the project:
 .github/
 docs/
 lints/
+man/
+scripts/
 site/
+skills/ripmcp-manual/
 src/
 tests/
-.gitignore
 .gitattributes
+.gitignore
 AGENTS.md
 Cargo.toml
 CHANGELOG.md
