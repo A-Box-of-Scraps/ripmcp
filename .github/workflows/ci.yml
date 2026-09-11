@@ -4,6 +4,11 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      package-release:
+        description: Package and upload the release build
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,7 +40,7 @@ jobs:
       - name: Check dprint formatting
         run: dprint check
       - name: Test release scripts
-        run: python3 -B -m unittest discover -s scripts/release -p 'test_*.py'
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Install jscpd
         run: cargo binstall --no-confirm --locked jscpd@5.0.14
       - name: Check code duplication
@@ -107,7 +112,19 @@ jobs:
       - name: Cache Rust builds
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       - name: Build
+        if: inputs.package-release != true
         run: cargo build --locked --release
+      - name: Build release artifact
+        if: inputs.package-release == true
+        run: bash scripts/src/build_artifact.sh
+      - name: Upload release artifact
+        if: inputs.package-release == true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-artifact
+          path: dist/
+          if-no-files-found: error
+          compression-level: 0
 
   check:
     if: ${{ always() }}

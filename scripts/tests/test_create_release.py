@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from create_release import SEMVER, main, release_command
+from scripts.src.create_release import SEMVER, main, release_command
 
 
 class ReleaseTests(unittest.TestCase):
@@ -102,7 +102,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(command[3], "v2.0.0")
         self.assertIn("--verify-tag", command)
 
-    @patch("create_release.subprocess.run")
+    @patch("scripts.src.create_release.subprocess.run")
     def test_tag_must_match_manifest(self, run):
         for event in ["push", "workflow_dispatch"]:
             for tag in ["v2.0.0", "v1.2.3-rc.1", "v1.2.3+build.1"]:
@@ -157,18 +157,46 @@ class ReleaseTests(unittest.TestCase):
                     "--prerelease" in self.command(GITHUB_REF_NAME=tag), prerelease
                 )
 
-    @patch("create_release.subprocess.run")
+    @patch("scripts.src.create_release.subprocess.run")
     @patch(
-        "create_release.release_command",
+        "scripts.src.create_release.release_command",
         return_value=["gh", "release", "create", "v1.2.3"],
     )
     def test_main_creates_release(self, prepare, run):
         main()
         run.assert_called_once_with(prepare.return_value, check=True)
 
-    @patch("create_release.subprocess.run")
-    @patch("create_release.release_command", side_effect=ValueError("invalid version"))
-    @patch("create_release.sys.stderr")
+    @patch("scripts.src.create_release.subprocess.run")
+    @patch(
+        "scripts.src.create_release.release_command",
+        return_value=["gh", "release", "create", "v1.2.3"],
+    )
+    def test_main_attaches_assets_and_exports_tag(self, prepare, run):
+        output = Path(self.temporary.name) / "output"
+        with patch.dict("os.environ", GITHUB_OUTPUT=str(output)):
+            main([str(self.manifest)])
+        self.assertEqual(run.call_args.args[0][-1], str(self.manifest))
+        self.assertEqual(output.read_text(), "tag=v1.2.3\n")
+
+    @patch("scripts.src.create_release.subprocess.run")
+    @patch(
+        "scripts.src.create_release.release_command",
+        return_value=["gh", "release", "create", "v1.2.3"],
+    )
+    def test_missing_asset_does_not_publish(self, prepare, run):
+        with (
+            patch("scripts.src.create_release.sys.stderr"),
+            self.assertRaises(SystemExit),
+        ):
+            main([str(self.manifest.parent / "missing.tar.gz")])
+        run.assert_not_called()
+
+    @patch("scripts.src.create_release.subprocess.run")
+    @patch(
+        "scripts.src.create_release.release_command",
+        side_effect=ValueError("invalid version"),
+    )
+    @patch("scripts.src.create_release.sys.stderr")
     def test_validation_failure_does_not_create_release(self, stderr, prepare, run):
         with self.assertRaises(SystemExit) as result:
             main()

@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - site/oauth/client.json
-      - scripts/pages/**
+      - scripts/src/prepare_metadata.py
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -32,7 +32,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate and prepare public metadata
-        run: python3 scripts/pages/prepare_metadata.py
+        run: python3 scripts/src/prepare_metadata.py
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         with:

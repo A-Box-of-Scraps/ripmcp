@@ -74,14 +74,22 @@ def release_command(environment: dict[str, str], manifest: Path) -> list[str]:
     return command
 
 
-def main() -> None:
+def main(assets: list[str] | None = None) -> None:
     try:
         command = release_command(dict(os.environ), Path("Cargo.toml"))
+        if assets:
+            for asset in assets:
+                if not Path(asset).is_file():
+                    raise ValueError(f"Release asset does not exist: {asset}")
+            command.extend(assets)
         subprocess.run(command, check=True)
+        if output := os.environ.get("GITHUB_OUTPUT"):
+            with Path(output).open("a") as stream:
+                stream.write(f"tag={command[3]}\n")
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
         print(f"Release failed: {error}", file=sys.stderr)
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
