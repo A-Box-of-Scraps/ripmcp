@@ -49,6 +49,34 @@ passes. See [remaining validation limits](compatibility.md#validation-status).
 
 ## Documentation maintenance
 
+### Manual generation
+
+`manual.md` is the authored source for the standalone `ripmcp(1)` reference.
+`man/ripmcp.1` at the repository root is generated and committed; do not edit it
+directly. Keep command behavior aligned with the implementation and leave parser
+help unchanged. Avoid repository-relative links and archive references in the
+manual, so it remains useful offline.
+
+Generation requires Python 3.11+ and Pandoc 3.11. The pinned converter and empty
+date make output reproducible; the footer version comes from `Cargo.toml`.
+After editing the source or changing the package version, run from the root:
+
+```sh
+dprint fmt --log-level=silent
+python3 scripts/src/build_manual.py
+python3 scripts/src/build_manual.py --check
+python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'
+man -l man/ripmcp.1
+```
+
+The manual tests also require groff and man-db. They check rendering and isolated
+manual lookup; release tests check archive contents and checksums without building
+Rust or contacting servers. Rust tests check public command coverage and native
+JSON examples. CI rejects stale generation. Ordinary Cargo builds and release
+packaging use the committed page and need no document converter.
+
+### General guidance
+
 - Keep tutorials guided and reproducible, with prerequisites and checkpoints.
 - Keep task steps in how-to guides, exact fields/options in reference, and design
   rationale in explanation. Link to detail instead of duplicating it everywhere.

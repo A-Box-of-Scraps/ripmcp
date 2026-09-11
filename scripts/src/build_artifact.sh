@@ -5,6 +5,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 cargo build --locked --release --bin ripmcp
 mkdir -p dist
-tar -czf dist/ripmcp-x86_64-unknown-linux-gnu.tar.gz -C target/release ripmcp
+tar -czf dist/ripmcp-x86_64-unknown-linux-gnu.tar.gz \
+  -C target/release ripmcp -C ../.. man/ripmcp.1
 cd dist
 sha256sum ripmcp-x86_64-unknown-linux-gnu.tar.gz > SHA256SUMS

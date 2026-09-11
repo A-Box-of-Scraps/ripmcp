@@ -117,6 +117,7 @@ Install Git, the stable Rust toolchain (including Cargo), Clang, and LLD, then r
 git clone https://github.com/A-Box-of-Scraps/ripmcp.git
 cd ripmcp
 cargo install --locked --path .
+install -Dm644 man/ripmcp.1 "$HOME/.local/share/man/man1/ripmcp.1"
 ripmcp --version
 ```
 
@@ -138,6 +139,7 @@ Download the latest [release](https://github.com/A-Box-of-Scraps/ripmcp/releases
     # Change the destination if desired, e.g. "${CARGO_HOME:-$HOME/.cargo}/bin/ripmcp"
     # or "/usr/local/bin/ripmcp" (requires sudo).
     install -Dm755 ripmcp "$HOME/.local/bin/ripmcp"
+    install -Dm644 man/ripmcp.1 "$HOME/.local/share/man/man1/ripmcp.1"
 )
 ripmcp --version
 ```

@@ -78,4 +78,15 @@ manual or package-manager removal. The command reports incomplete removal rather
 than claiming success. Failures retain retry evidence and prevent premature binary
 deletion. Do not remove whole `PATH` directories or broadly edit shell files.
 
+The manual installed with the documented `install` command is not tracked for
+self-removal. Remove that exact user-local page separately:
+
+```sh
+rm -- "$HOME/.local/share/man/man1/ripmcp.1"
+```
+
+For a manual you installed system-wide, remove the corresponding
+`/usr/local/share/man/man1/ripmcp.1` with the required permissions. For package-managed
+files, use the package manager instead. Do not delete the containing manual tree.
+
 Why these limits exist: [ownership and safe cleanup](../explanation/lifecycle-and-safety.md#ownership-controls-cleanup).

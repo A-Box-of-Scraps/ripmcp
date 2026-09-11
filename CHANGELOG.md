@@ -4,6 +4,7 @@
 
 ### Added
 
+- Standalone `ripmcp(1)` manual, shipped in release archives with user-local installation instructions and reproducible generation checks.
 - Phase 01: Typed CLI commands, strict argument validation, stable exit codes, JSON output, and isolated test fixtures.
 - Phase 02: User/project configuration, content-bound project trust, private XDG storage, atomic updates, and durable ownership records.
 - Phase 03: Tools-focused MCP client over stdio and Streamable HTTP, with paginated discovery, complete tool results, deadlines, and cancellation without automatic call replay.

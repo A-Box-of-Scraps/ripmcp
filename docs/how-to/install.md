@@ -24,6 +24,37 @@ The examples below use `ripmcp` on `PATH`. A Cargo build does not establish the
 installer provenance required for automatic executable deletion during
 [self-removal](remove.md#remove-ripmcp).
 
+## Install the manual
+
+From the repository root or an extracted release archive, install the matching
+manual alongside the binary:
+
+```sh
+install -Dm644 man/ripmcp.1 "$HOME/.local/share/man/man1/ripmcp.1"
+man 1 ripmcp
+```
+
+The generated page ships with the source and release archive; reading or installing
+it does not require Pandoc. Cargo build/install does not install the manual for you.
+Install your distribution's `man` reader if it is missing.
+
+If the reader does not discover the user-local manual directory, add this to your
+shell configuration. The trailing colon retains the default manual search paths
+with man-db:
+
+```sh
+export MANPATH="$HOME/.local/share/man:${MANPATH:-}"
+```
+
+For a system-wide manual accompanying a binary in `/usr/local/bin`, use
+`sudo install -Dm644 man/ripmcp.1 /usr/local/share/man/man1/ripmcp.1` instead.
+Use the same source/release version for the binary and manual when updating.
+
+To preview without installing, run `man -l man/ripmcp.1`. Agents and scripts can
+read the installed page without a pager using `MANPAGER=cat man 1 ripmcp`.
+The manual explains workflows and behavior; command-specific `--help` supplies
+exact parser syntax.
+
 ## Install a local server
 
 Choose a package or image that supports the

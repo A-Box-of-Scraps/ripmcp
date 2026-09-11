@@ -3,6 +3,10 @@
 ripmcp manages local and remote MCP servers from the shell. Discover tools, inspect
 their inputs, invoke them once, and inspect saved JSON without another invocation.
 
+For a standalone terminal reference, use `man 1 ripmcp` or read its
+[Markdown source](reference/manual.md). See [manual installation](how-to/install.md#install-the-manual)
+if the page is not installed.
+
 **Start here:** [Build ripmcp](how-to/install.md), then follow
 [your first tool call](tutorials/first-call.md). To learn result inspection without
 a server or credentials, use the [offline tutorial](tutorials/inspect-json.md).
