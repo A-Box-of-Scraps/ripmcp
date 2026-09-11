@@ -105,6 +105,43 @@ ripmcp --uninstall-everything -y  # Same self-removal without prompting
 
 </details>
 
+## Installation
+
+ripmcp currently only supports Linux x86_64 with glibc.
+
+### Build from source
+
+Install Git, the stable Rust toolchain (including Cargo), Clang, and LLD, then run:
+
+```sh
+git clone https://github.com/A-Box-of-Scraps/ripmcp.git
+cd ripmcp
+cargo install --locked --path .
+ripmcp --version
+```
+
+### Download the latest release
+
+Download the latest [release](https://github.com/A-Box-of-Scraps/ripmcp/releases), verify its checksum, and install the binary:
+
+```sh
+(
+    set -eu
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    cd "$tmp"
+    release=https://github.com/A-Box-of-Scraps/ripmcp/releases/latest/download
+    curl -fLO "$release/ripmcp-x86_64-unknown-linux-gnu.tar.gz"
+    curl -fLO "$release/SHA256SUMS"
+    sha256sum -c SHA256SUMS
+    tar -xzf ripmcp-x86_64-unknown-linux-gnu.tar.gz
+    # Change the destination if desired, e.g. "${CARGO_HOME:-$HOME/.cargo}/bin/ripmcp"
+    # or "/usr/local/bin/ripmcp" (requires sudo).
+    install -Dm755 ripmcp "$HOME/.local/bin/ripmcp"
+)
+ripmcp --version
+```
+
 ## Documentation
 
 Start [HERE](docs/README.md)!
