@@ -95,6 +95,10 @@ def main(assets: list[str] | None = None) -> None:
                     raise ValueError(f"Release asset does not exist: {asset}")
             command.extend(assets)
         notes = release_notes(Path("CHANGELOG.md").read_text())
+        notes += (
+            f"\n**Full Changelog**: https://github.com/"
+            f"{os.environ['GITHUB_REPOSITORY']}/commits/{command[3]}\n"
+        )
         subprocess.run(command, input=notes, text=True, check=True)
         if output := os.environ.get("GITHUB_OUTPUT"):
             with Path(output).open("a") as stream:

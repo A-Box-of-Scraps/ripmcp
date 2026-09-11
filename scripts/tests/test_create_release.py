@@ -170,10 +170,40 @@ class ReleaseTests(unittest.TestCase):
         return_value=["gh", "release", "create", "v1.2.3"],
     )
     def test_main_creates_release(self, prepare, run):
-        main()
+        with patch.dict("os.environ", self.environment):
+            main()
         run.assert_called_once_with(
-            prepare.return_value, input=self.notes, text=True, check=True
+            prepare.return_value,
+            input=self.notes
+            + "\n**Full Changelog**: https://github.com/owner/repo/commits/v1.2.3\n",
+            text=True,
+            check=True,
         )
+
+    @patch("scripts.src.create_release.subprocess.run")
+    def test_full_changelog_uses_selected_release_tag(self, run):
+        for override in ["2.0.0", "v2.0.0-rc.1", "nightly"]:
+            with (
+                self.subTest(override=override),
+                patch.dict(
+                    "os.environ",
+                    self.environment
+                    | {
+                        "GITHUB_EVENT_NAME": "workflow_dispatch",
+                        "GITHUB_REPOSITORY": "A-Box-of-Scraps/ripmcp",
+                        "RELEASE_VERSION": override,
+                    },
+                    clear=True,
+                ),
+            ):
+                main()
+                tag = override if override.startswith("v") else f"v{override}"
+                self.assertEqual(
+                    run.call_args.kwargs["input"],
+                    self.notes
+                    + "\n**Full Changelog**: "
+                    + f"https://github.com/A-Box-of-Scraps/ripmcp/commits/{tag}\n",
+                )
 
     @patch("scripts.src.create_release.subprocess.run")
     @patch(
@@ -182,10 +212,16 @@ class ReleaseTests(unittest.TestCase):
     )
     def test_main_attaches_assets_and_exports_tag(self, prepare, run):
         output = Path(self.temporary.name) / "output"
-        with patch.dict("os.environ", GITHUB_OUTPUT=str(output)):
+        with patch.dict(
+            "os.environ", self.environment | {"GITHUB_OUTPUT": str(output)}
+        ):
             main([str(self.manifest)])
         self.assertEqual(run.call_args.args[0][-1], str(self.manifest))
-        self.assertEqual(run.call_args.kwargs["input"], self.notes)
+        self.assertEqual(
+            run.call_args.kwargs["input"],
+            self.notes
+            + "\n**Full Changelog**: https://github.com/owner/repo/commits/v1.2.3\n",
+        )
         self.assertEqual(output.read_text(), "tag=v1.2.3\n")
 
     @patch("scripts.src.create_release.subprocess.run")
