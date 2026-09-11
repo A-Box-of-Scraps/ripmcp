@@ -1,18 +1,24 @@
 import subprocess
 import tempfile
 import unittest
+from contextlib import chdir
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.src.create_release import SEMVER, main, release_command
+from scripts.src.create_release import SEMVER, main, release_command, release_notes
 
 
 class ReleaseTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
+        self.enterContext(chdir(self.temporary.name))
         self.manifest = Path(self.temporary.name) / "Cargo.toml"
         self.manifest.write_text('[package]\nversion = "1.2.3"\n')
+        self.notes = "### Added\n\n- New command\n\n### Fixed\n\n- Bug fix\n"
+        Path("CHANGELOG.md").write_text(
+            "# Changelog\n\n## [Unreleased]\n\n" + self.notes
+        )
         self.environment = {
             "GITHUB_EVENT_NAME": "push",
             "GITHUB_REF_TYPE": "tag",
@@ -67,7 +73,8 @@ class ReleaseTests(unittest.TestCase):
         command = self.command(RELEASE_VERSION="nightly", RELEASE_DRAFT="true")
         self.assertEqual(command[:4], ["gh", "release", "create", "v1.2.3"])
         self.assertIn("--verify-tag", command)
-        self.assertIn("--generate-notes", command)
+        self.assertNotIn("--generate-notes", command)
+        self.assertEqual(command[command.index("--notes-file") + 1], "-")
         self.assertNotIn("--draft", command)
         self.assertNotIn("--prerelease", command)
         self.assertEqual(command[command.index("--target") + 1], "a" * 40)
@@ -164,7 +171,9 @@ class ReleaseTests(unittest.TestCase):
     )
     def test_main_creates_release(self, prepare, run):
         main()
-        run.assert_called_once_with(prepare.return_value, check=True)
+        run.assert_called_once_with(
+            prepare.return_value, input=self.notes, text=True, check=True
+        )
 
     @patch("scripts.src.create_release.subprocess.run")
     @patch(
@@ -176,6 +185,7 @@ class ReleaseTests(unittest.TestCase):
         with patch.dict("os.environ", GITHUB_OUTPUT=str(output)):
             main([str(self.manifest)])
         self.assertEqual(run.call_args.args[0][-1], str(self.manifest))
+        self.assertEqual(run.call_args.kwargs["input"], self.notes)
         self.assertEqual(output.read_text(), "tag=v1.2.3\n")
 
     @patch("scripts.src.create_release.subprocess.run")
@@ -201,6 +211,41 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as result:
             main()
         self.assertEqual(result.exception.code, 1)
+        run.assert_not_called()
+
+    def test_notes_preserve_categories_and_exclude_previous_releases(self):
+        changelog = (
+            "# Changelog\n\nIntro\n\n## [Unreleased]\n\n"
+            + self.notes
+            + "\n## [1.0.0] - 2026-09-01\n\n### Added\n\n- Old command\n"
+        )
+        self.assertEqual(release_notes(changelog), self.notes)
+
+    def test_notes_without_previous_releases(self):
+        self.assertEqual(release_notes(Path("CHANGELOG.md").read_text()), self.notes)
+
+    def test_invalid_notes(self):
+        for changelog in [
+            "# Changelog\n",
+            "## [Unreleased]\n\n## [Unreleased]\n\n- Duplicate\n",
+            "## [Unreleased]\n\n",
+            "## [Unreleased]\n\n## [1.0.0]\n\n- Old command\n",
+        ]:
+            with self.subTest(changelog=changelog), self.assertRaises(ValueError):
+                release_notes(changelog)
+
+    @patch("scripts.src.create_release.subprocess.run")
+    @patch(
+        "scripts.src.create_release.release_command",
+        return_value=["gh", "release", "create", "v1.2.3"],
+    )
+    def test_invalid_changelog_does_not_publish(self, prepare, run):
+        Path("CHANGELOG.md").write_text("## [Unreleased]\n")
+        with (
+            patch("scripts.src.create_release.sys.stderr"),
+            self.assertRaises(SystemExit),
+        ):
+            main()
         run.assert_not_called()
 
 

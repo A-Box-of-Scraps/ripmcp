@@ -15,6 +15,17 @@ SEMVER = re.compile(
 )
 
 
+def release_notes(changelog: str) -> str:
+    headings = list(re.finditer(r"^## \[Unreleased\][ \t]*$", changelog, re.MULTILINE))
+    if len(headings) != 1:
+        raise ValueError("Changelog must contain exactly one [Unreleased] section")
+    section = changelog[headings[0].end() :]
+    notes = re.split(r"^##[ \t]+", section, maxsplit=1, flags=re.MULTILINE)[0].strip()
+    if not notes:
+        raise ValueError("Changelog [Unreleased] section must not be empty")
+    return notes + "\n"
+
+
 def select_tag(environment: dict[str, str], manifest: Path, override: str) -> str:
     if override:
         return override if override.startswith("v") else f"v{override}"
@@ -63,7 +74,8 @@ def release_command(environment: dict[str, str], manifest: Path) -> list[str]:
         tag,
         "--target",
         environment["GITHUB_SHA"],
-        "--generate-notes",
+        "--notes-file",
+        "-",
     ]
     if is_tag and not override:
         command.append("--verify-tag")
@@ -82,7 +94,8 @@ def main(assets: list[str] | None = None) -> None:
                 if not Path(asset).is_file():
                     raise ValueError(f"Release asset does not exist: {asset}")
             command.extend(assets)
-        subprocess.run(command, check=True)
+        notes = release_notes(Path("CHANGELOG.md").read_text())
+        subprocess.run(command, input=notes, text=True, check=True)
         if output := os.environ.get("GITHUB_OUTPUT"):
             with Path(output).open("a") as stream:
                 stream.write(f"tag={command[3]}\n")
