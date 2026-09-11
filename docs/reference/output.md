@@ -23,24 +23,31 @@ discovery report; not every nonempty `call` output is a tool result.
 
 Non-call reports use `schema_version: 1`. Do not expect one universal report shape:
 
-| Command                    | Main fields                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| `servers`                  | `servers`: name, provenance, enabled, trust_required, process_state, health                  |
-| `tools`                    | `tools`: server, name, enabled, optional description/title; `errors` array                   |
-| `tool`                     | Full definition under `tool`                                                                 |
-| Ambiguous shorthand        | `candidates`: server/tool pairs                                                              |
-| `install`                  | `installation`: identity, scope, preparation, verification, retention and mutation reporting |
-| `enable`, `disable`        | `actions`, `shadowed_by_trusted_project`, `project_reapproval_required`                      |
-| `auth configure`           | `auth`, mutation flags; remote_validity_checked is false                                     |
-| `auth status/login/logout` | `auth`: server, state, sharing and remote-validity indicators                                |
-| `trust`                    | `trust`: approved project information                                                        |
-| `uninstall`                | `completed`, `failures`, `plan`; plan includes preserved resources and retry vector/cwd      |
-| Self-removal               | `completed`, `failures`, `plan`; retained recovery state on incomplete removal               |
-| `shape`                    | `shape` and `limits`                                                                         |
+| Command                    | Main fields                                                                                                    |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `servers`                  | `servers`: name, provenance, enabled, trust_required, process_state, health                                    |
+| `tools`                    | `tools`: server, name, enabled, optional description/title; `errors` array                                     |
+| `tool`                     | Full definition under `tool`                                                                                   |
+| `start`, `stop`            | `actions`: server, action, reused                                                                              |
+| Ambiguous shorthand        | `candidates`: server/tool pairs                                                                                |
+| `install`                  | `installation`: id, server, scope, target, prepared, verification, process_retained, preserved, mutation flags |
+| `enable`, `disable`        | `actions`, `shadowed_by_trusted_project`, `project_reapproval_required`                                        |
+| `auth configure`           | `auth`, mutation flags; remote_validity_checked is false                                                       |
+| `auth status/login/logout` | `auth`: server, state, sharing and remote-validity indicators                                                  |
+| `trust`                    | `trust`: approved project information                                                                          |
+| `uninstall`                | `completed`, `failures`, `plan`; plan includes preserved resources and retry vector/cwd                        |
+| Self-removal               | `completed`, `failures`, `plan`; retained recovery state on incomplete removal                                 |
+| `shape`                    | `shape` and `limits`                                                                                           |
 
 Do not treat an empty/partial discovery report as proof that unavailable servers
-have no tools. `tools` writes valid entries and safe failure identities before
-exiting 8 on incomplete discovery.
+have no tools. Cross-server `tools` writes valid entries and safe failure identities
+before exiting 8 on incomplete discovery. A qualified `tools SERVER` can fail before
+there is a report (for example, with exit 4 for connection failure); rejected HTTP
+tool-header annotations can instead produce a partial report and exit 8.
+
+`start` reports whether an existing process was reused. `stop` reports
+`reused: false`; it is not a health observation. Install mutation flags are nested
+under `installation`, unlike top-level policy/configure mutation flags.
 
 ### Server status
 
@@ -63,6 +70,10 @@ Bearer status succeeds with `state: "available"` only after local resolution and
 syntax checks; missing credentials are errors. It does not contact the provider.
 Bearer status reports `method: "bearer"`. Custom header collections are not
 managed by these status/logout operations.
+
+Bearer status/logout require enablement. Externally managed bearer logout exits 10
+with a diagnostic and no JSON success report. OAuth status/logout do not require
+enablement. Both mechanisms still require trust for a selected project definition.
 
 ## Shape reports
 
@@ -130,6 +141,10 @@ One monotonic operation budget includes waits, preparation, connection, discover
 invocation, and any interactive continuation. Progress does not reset it. Explicit
 OAuth login and credential setup include time spent waiting for the user and
 secure storage. Destructive confirmation happens before the mutation deadline.
+
+`trust` is an exception to the single-budget rule: its synchronous terminal prompt
+is not timed. After approval, the configured/CLI timeout is used separately for
+maintenance-lock acquisition and the approval write. Declining trust exits 3.
 
 Ctrl-C requests cancellation and exits 130; deadline expiry exits 9. Neither
 proves server-side effects were rolled back. ripmcp never automatically replays a

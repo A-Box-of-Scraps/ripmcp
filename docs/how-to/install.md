@@ -114,6 +114,10 @@ Write one native server object to `remote.json`:
 }
 ```
 
+If the endpoint uses automatic OAuth client registration, set `authentication`
+to `oauth` before installation. Bearer tokens, custom headers, and an explicit
+OAuth client can instead be selected later with `auth configure`.
+
 Replace the example URL, then run:
 
 ```sh

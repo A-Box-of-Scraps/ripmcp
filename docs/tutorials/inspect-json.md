@@ -5,7 +5,7 @@
 Learn to inspect structure before selecting values. This exercise uses a saved
 example result, no server, no configuration, and no credentials.
 
-You need `ripmcp`, a shell, and `jq` for the final extraction step. ripmcp itself
+You need [ripmcp installed](../how-to/install.md), a shell, and `jq` for the final extraction step. ripmcp itself
 does not depend on `jq`.
 
 ## 1. Save an example
@@ -74,5 +74,5 @@ Second item
 You have used the same saved document for every view. With a real tool result,
 this avoids repeating side effects or receiving different data on a second call.
 
-Next: [make a real tool call](first-call.md), or look up
+Next: [call your remote server](../how-to/first-call.md), or look up
 [shape limits and output](../reference/output.md#shape-reports).

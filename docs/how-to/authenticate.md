@@ -68,6 +68,13 @@ not a way to layer bearer authentication and OAuth. It preserves server enableme
 and tool policy, but clears previous bearer/OAuth client settings as appropriate.
 Changing modes does not revoke old tokens or delete potentially shared secrets.
 
+Other custom headers remain configured and are still sent. Bearer/OAuth setup
+removes an explicit `Authorization` header; custom-header setup replaces only the
+named header (case-insensitively) and retains any explicit `Authorization` header.
+Review `definition.headers` when changing credentials. To stop sending an obsolete
+header, remove its entry from the selected configuration and renew project trust
+if applicable. There is no header-removal flag.
+
 ## Use remote OAuth
 
 For automatic client registration, import a remote definition with
@@ -148,7 +155,7 @@ ripmcp auth logout remote
 - Stored bearer logout deletes the ripmcp-managed token but leaves its reference.
   Run configure again to replace it.
 - Environment and external-keyring tokens remain externally managed. Logout
-  reports that limitation; rotate or remove them in their source.
+  exits 10 without a success report; rotate or remove them in their source.
 - Logout does not revoke tokens at the provider or undo requests already sent.
 
 For environment references, change the variable value supplied to the next
@@ -165,3 +172,8 @@ setup does not require a keyring. Hidden prompts use `/dev/tty`; tokens exceedin
 `--project` for the project target or run outside the project for the user target.
 Project mutations require renewed `ripmcp trust`. Login/status/logout use the
 effective definition and do not accept scope flags.
+
+Bearer status and logout also require the server to be enabled. If it is disabled,
+enable it in the correct scope first and renew project trust if needed; enabling
+does not contact the server. OAuth status/logout can inspect or clear a disabled
+registration, but still require project trust.

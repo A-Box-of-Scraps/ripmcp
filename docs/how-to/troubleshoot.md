@@ -36,6 +36,14 @@ server but does not invoke a tool.
 - `auth status` reports local state, not provider acceptance. After changing
   credentials or registration, use explicit login or discovery as appropriate.
 
+## Bearer logout does not clear credentials
+
+Environment and external-keyring references are externally managed. Logout exits
+10; rotate or remove the value at its source. For a managed `stored` reference,
+bearer logout requires the registration to be enabled and trusted first. Enabling
+a server does not start it or make a network request. See
+[credential rotation](authenticate.md#sign-out-and-rotate-credentials).
+
 ## Status says running but health is stale
 
 Enablement, process ownership, and health are different fields. A passive list

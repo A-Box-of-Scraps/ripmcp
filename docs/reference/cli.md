@@ -64,6 +64,8 @@ or now-untrusted instance without executing the edited definition.
 
 These commands select effective configuration; they have no scope flags. `trust`
 has no path argument, `-y`, or project-creation behavior.
+Declining trust exits 3, unlike declining destructive cleanup (130). The trust
+prompt is outside the timeout; see [deadline exceptions](output.md#deadlines-and-cancellation).
 
 ## Invocation
 
@@ -137,6 +139,16 @@ OAuth configure options:
 Secret, method, and scope options require a client ID. Method `none` requires no
 secret; Post/Basic require a secret. The helper defaults to Post with a secret,
 otherwise none. Login is for remote OAuth, not bearer or local server credentials.
+
+Configure retains unrelated custom headers. Bearer/OAuth setup removes an explicit
+Authorization header; header setup replaces only the named header and selects
+authentication `none`. There is no option to remove a header. See
+[changing credentials](../how-to/authenticate.md#set-a-custom-credential-header).
+
+Bearer status/logout require an enabled server. Logout of an environment or
+external-keyring bearer reference exits 10 without a JSON success report; only
+managed `stored` bearer values can be deleted. OAuth status/logout also work for
+disabled servers. All require a trusted effective project definition when selected.
 
 Procedures and prerequisites: [authentication](../how-to/authenticate.md).
 

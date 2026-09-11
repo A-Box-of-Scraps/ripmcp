@@ -12,7 +12,7 @@ that a named public provider or arbitrary MCP package has been tested successful
 | Platform         | Linux; managed processes require kernel pidfd support and private Unix sockets |
 | Protocol version | Exact `2026-07-28`; no implicit older-version fallback                         |
 | Local transport  | stdio through prepared npx, uvx, or Docker installations                       |
-| Remote transport | Streamable HTTP POST with JSON or request-scoped SSE replies                   |
+| Remote transport | HTTP/1.1 Streamable HTTP POST with JSON or request-scoped SSE replies          |
 | Discovery        | `server/discover`, followed by paginated `tools/list`                          |
 | Calls            | `tools/call`, full result envelope, no automatic replay                        |
 | User interaction | Explicit `--interactive` structured URL elicitation continuations              |
@@ -80,8 +80,8 @@ lifecycle, policy, shape, and sandboxed cleanup tests. Default installation test
 use fake runtime executables; OAuth tests use isolated fixtures and fake-store
 seams rather than personal credentials.
 
-The [recorded full-system handoff](../old/implementation/09-v1-validation.md)
-remains **blocked**, with these gaps:
+The current [test coverage evidence](../../tests/validation/coverage.md#remaining-integration-gaps)
+records two missing full-system checks. **v1 validation remains incomplete:**
 
 1. One authenticated end-to-end CLI lifecycle combining production TLS and an
    isolated real Secret Service adapter, login, call, refresh, logout, and project

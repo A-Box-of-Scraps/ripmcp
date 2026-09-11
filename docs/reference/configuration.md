@@ -21,7 +21,8 @@ must also pass private ownership and permission checks; its fallback ignores
 Storage is created when needed, not all at startup. Sensitive state directories
 and files require the effective user and modes 0700/0600 respectively.
 
-Trust approvals are stored in state `trust.json`, outside the selected project.
+Trust approvals are stored in state `trust.json`. The state directory must be
+outside the selected project; an XDG override inside it prevents approval.
 `ownership.json`, `artifacts.json`, and retry metadata are generated internal state,
 not configuration to copy between projects. OAuth lock/epoch files use the private
 `/tmp/ripmcp-UID/` area independently of XDG overrides; they contain no tokens.
@@ -137,7 +138,9 @@ For bearer authentication, the referenced value is a raw token; ripmcp adds the
 prefix. An explicit native `Authorization` header is allowed only with
 `authentication: "none"`, and its value must contain the complete header value.
 The configure helper does not create that legacy form. OAuth and managed bearer
-cannot be combined with an explicit Authorization header.
+cannot be combined with an explicit Authorization header. Authentication mode
+changes do not remove unrelated custom headers; see the
+[configure behavior](cli.md#authentication) before switching credentials.
 
 ### OAuth client object
 

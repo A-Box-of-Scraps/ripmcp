@@ -189,8 +189,8 @@ shown, but field names can contain secrets: shape is not a general redaction too
 Preview and approve the selected project's exact configuration bytes at its
 canonical location. Review the actual file as well as the redacted preview.
 Both stdin and stderr must be terminals. There is no path argument, `-y`, or
-project-creation behavior. Trust allows configured operations; it is not a sandbox
-for local server code. See CONFIGURATION AND TRUST.
+project-creation behavior. Declining approval exits 3. Trust allows configured
+operations; it is not a sandbox for local server code. See CONFIGURATION AND TRUST.
 
 ## auth
 
@@ -217,15 +217,18 @@ Not used for bearer tokens or local servers.
 
 Inspect local authentication state without checking provider acceptance. OAuth
 `saved` means credentials exist locally. Bearer `available` means local resolution
-and syntax checks passed; missing credentials are errors. Custom header collections
-are not managed by this command.
+and syntax checks passed; missing credentials are errors. Bearer status requires an
+enabled server; OAuth status can inspect a disabled registration. Both require
+project trust when applicable. Custom headers are not managed by this command.
 
 ## auth logout
 
 Invalidate local OAuth credentials for the endpoint/registration partition, also
 affecting aliases sharing that partition. For managed bearer storage, delete the
 token but leave its reference for reconfiguration. Environment and external
-keyring values remain externally managed. Does not revoke provider-side tokens
+keyring values remain externally managed: logout exits 10 without a JSON success
+report. Bearer logout requires enablement; OAuth logout does not. Both require
+project trust when applicable. Does not revoke provider-side tokens
 or undo requests already authorized. Custom header collections are not managed.
 
 # INPUT AND OUTPUT
@@ -258,6 +261,10 @@ interaction. Progress does not reset it. Destructive confirmation precedes the
 mutation deadline. Ctrl-C exits 130; timeout exits 9. Neither promises rollback.
 Cancelling a reused local call does not kill the shared server. Process cleanup
 can require an additional bounded grace period.
+
+Trust is an exception: its synchronous terminal prompt is not timed. After
+approval, the timeout applies separately to maintenance-lock acquisition and the
+approval write, rather than one end-to-end budget.
 
 ## Limits
 
@@ -381,6 +388,12 @@ For an API key header, use `auth configure remote --header X-API-Key` to prompt,
 or append `--header-env SERVICE_API_KEY`. The helper rejects Authorization and
 transport-owned headers; use managed bearer setup for a bearer token. Check custom
 headers through discovery, not auth status.
+
+Changing authentication retains unrelated custom headers. Bearer/OAuth setup
+removes an explicit Authorization header; custom-header setup replaces only its
+named header and retains any explicit Authorization header. Remove obsolete
+entries from the selected configuration yourself and renew project trust if needed.
+There is no header-removal option.
 
 For OAuth with your own registered public client:
 
@@ -509,8 +522,8 @@ plaintext credential file.
 Linux only; managed processes require kernel pidfd support and private Unix
 sockets. This implementation targets exact MCP `2026-07-28`, with `server/discover`
 and paginated `tools/list`, not legacy initialization or implicit revision fallback.
-Local transport is stdio; remote transport is Streamable HTTP POST with JSON or
-request-scoped SSE replies. An arbitrary MCP label does not prove compatibility.
+Local transport is stdio; remote transport is HTTP/1.1 Streamable HTTP POST with
+JSON or request-scoped SSE replies. An arbitrary MCP label does not prove compatibility.
 
 No resource/prompt workflows, sampling, roots, forms, subscriptions, task workflows,
 registry browsing, automatic package updates, or general result querying. Remote
