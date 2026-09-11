@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-11
+
 ### Added
 
 - Standalone `ripmcp(1)` manual, shipped in release archives with user-local installation instructions and reproducible generation checks.
