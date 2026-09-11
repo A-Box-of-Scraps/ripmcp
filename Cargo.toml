@@ -45,6 +45,10 @@ url = "2.5.8"
 [workspace.metadata.dylint]
 libraries = [{ path = "lints/explicit-local-types" }]
 
+# Self-uninstall tests hash the full debug executable in both test and CLI processes.
+[profile.dev.package.sha2]
+opt-level = 3
+
 [dev-dependencies]
 rustix = { version = "1.1.4", features = ["pty"] }
 tempfile = "3.27.0"

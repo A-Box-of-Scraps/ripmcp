@@ -100,29 +100,41 @@ fn exercise_stop_and_disable(fixture: &Fixture) {
 }
 
 #[test]
-fn installed_local_lifecycle_across_processes_for_every_adapter() {
-    for runtime in ["--npx", "--uvx", "--docker"] {
-        let fixture: Fixture = Fixture::new();
-        let installed: Value = fixture.ok(&["install", "s", runtime, "fixture", "--user"]);
-        assert_eq!(installed["installation"]["verification"], "verified");
-        assert_eq!(
-            fixture.ok(&["servers"])["servers"][0]["process_state"],
-            "running"
-        );
-        assert_eq!(fixture.ok(&["tool", "s", "echo"])["tool"]["name"], "echo");
-        assert!(!fixture.log().contains("tools/call"));
-        exercise_policy(&fixture);
-        exercise_stop_and_disable(&fixture);
-        exercise_reinstall_and_cleanup(&fixture, runtime);
-        assert_eq!(
-            fixture
-                .log()
-                .lines()
-                .filter(|line| *line == "tools/call")
-                .count(),
-            3
-        );
-    }
+fn installed_npx_lifecycle_across_processes() {
+    exercise_local_lifecycle("--npx");
+}
+
+#[test]
+fn installed_uvx_lifecycle_across_processes() {
+    exercise_local_lifecycle("--uvx");
+}
+
+#[test]
+fn installed_docker_lifecycle_across_processes() {
+    exercise_local_lifecycle("--docker");
+}
+
+fn exercise_local_lifecycle(runtime: &str) {
+    let fixture: Fixture = Fixture::new();
+    let installed: Value = fixture.ok(&["install", "s", runtime, "fixture", "--user"]);
+    assert_eq!(installed["installation"]["verification"], "verified");
+    assert_eq!(
+        fixture.ok(&["servers"])["servers"][0]["process_state"],
+        "running"
+    );
+    assert_eq!(fixture.ok(&["tool", "s", "echo"])["tool"]["name"], "echo");
+    assert!(!fixture.log().contains("tools/call"));
+    exercise_policy(&fixture);
+    exercise_stop_and_disable(&fixture);
+    exercise_reinstall_and_cleanup(&fixture, runtime);
+    assert_eq!(
+        fixture
+            .log()
+            .lines()
+            .filter(|line| *line == "tools/call")
+            .count(),
+        3
+    );
 }
 
 fn exercise_reinstall_and_cleanup(fixture: &Fixture, runtime: &str) {

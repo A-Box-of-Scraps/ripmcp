@@ -98,9 +98,9 @@ fn cancellation_and_timeout_reap_preparation_descendants() {
 #[test]
 fn concurrent_external_edits_are_not_overwritten() {
     let fixture: Fixture = Fixture::new();
-    fixture.flag("verify-stall");
+    fixture.flag("verify-pause");
     let child: Child = fixture
-        .command(&["install", "s", "--npx", "fixture", "--timeout", "3"])
+        .command(&["install", "s", "--npx", "fixture", "--timeout", "5"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -108,8 +108,14 @@ fn concurrent_external_edits_are_not_overwritten() {
     fixture.wait("verifying");
     let replacement: &[u8] = b"{\"schema_version\":1,\"servers\":{}}";
     fs::write(fixture.config(), replacement).unwrap();
+    fixture.flag("release");
     let output: Output = child.wait_with_output().unwrap();
-    assert!(!output.status.success());
+    assert_eq!(output.status.code(), Some(3), "{output:?}");
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("configuration changed during installation"),
+        "{output:?}"
+    );
     assert_eq!(fs::read(fixture.config()).unwrap(), replacement);
 }
 
