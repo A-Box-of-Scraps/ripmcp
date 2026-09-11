@@ -144,6 +144,12 @@ Download the latest [release](https://github.com/A-Box-of-Scraps/ripmcp/releases
 ripmcp --version
 ```
 
+## AI Agents Integration
+
+Use the [ripmcp-manual skill](skills/ripmcp-manual/SKILL.md) to help your agent
+manage and invoke MCP servers through the shell. See the
+[setup guide](docs/how-to/ai-agents.md).
+
 ## Documentation
 
 Start [HERE](docs/README.md)!

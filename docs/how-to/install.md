@@ -55,6 +55,13 @@ read the installed page without a pager using `MANPAGER=cat man 1 ripmcp`.
 The manual explains workflows and behavior; command-specific `--help` supplies
 exact parser syntax.
 
+## Install the agent skill
+
+The repository includes a `ripmcp-manual` skill for AI agents with shell access.
+After installing the binary and manual, follow the
+[agent integration guide](ai-agents.md) to install the skill in your harness and
+verify that the agent can use it.
+
 ## Install a local server
 
 Choose a package or image that supports the

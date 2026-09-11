@@ -11,6 +11,10 @@ if the page is not installed.
 [your first tool call](tutorials/first-call.md). To learn result inspection without
 a server or credentials, use the [offline tutorial](tutorials/inspect-json.md).
 
+**Using an AI agent?** Install the bundled `ripmcp-manual` skill with the
+[agent integration guide](how-to/ai-agents.md) so your harness can use MCP through
+shell commands.
+
 This documentation describes the repository implementation, not the historical
 proposals. It supports Linux and targets MCP `2026-07-28` only. Check
 [compatibility and validation limits](reference/compatibility.md) before choosing
